@@ -1,0 +1,18 @@
+dataGenerationParallelism: 5
+dataScalesGb:
+- 1
+dsdgenWorkLocalDir: /tmp/tpcds_work_dir
+generateData: true
+hadoop:
+  hadoopConf:
+    fs.defaultFS: hdfs://localhost:8020
+overwriteData: false
+spark:
+  executorCores: 1
+  executorInstances: 1
+  executorMemory: 1g
+  master: local[4]
+  sparkConf:
+    spark.yarn.jars: service/lib/*
+testDataDir: hdfs://localhost:8020/data/tpcds/test_data
+iterations: 1

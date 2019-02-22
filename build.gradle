@@ -1,0 +1,103 @@
+/*
+ * (c) Copyright 2019 Palantir Technologies Inc. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+buildscript {
+    repositories {
+        jcenter()
+        maven {
+            url "http://palantir.bintray.com/releases"
+        }
+    }
+
+    dependencies {
+        classpath 'com.palantir.gradle.consistentversions:gradle-consistent-versions:0.15.0'
+        classpath 'com.palantir.baseline:gradle-baseline-java:0.50.0'
+        classpath 'com.palantir.gradle.conjure:gradle-conjure:4.7.2'
+        classpath 'com.palantir.sls-packaging:gradle-sls-packaging:3.3.0'
+        classpath 'gradle.plugin.com.palantir.gradle.gitversion:gradle-git-version:0.11.0'
+        classpath 'gradle.plugin.org.inferred:gradle-processors:2.1.0'
+    }
+}
+
+plugins {
+    id 'com.palantir.git-version' version '0.11.0'
+}
+
+apply plugin: 'com.palantir.baseline'
+apply plugin: 'com.palantir.git-version'
+apply plugin: 'com.palantir.consistent-versions'
+
+version gitVersion()
+
+allprojects {
+    version rootProject.version
+    group 'com.palantir.spark.tpcds'
+
+    repositories {
+        jcenter()
+        maven {
+            url "http://palantir.bintray.com/releases"
+        }
+    }
+    // Configure BOMs as rootConfiguration dependencies
+    dependencies {
+        rootConfiguration platform("org.apache.spark:spark-dist_2.11-hadoop-palantir-bom")
+    }
+    pluginManager.withPlugin 'java', {
+        dependencies {
+            constraints {
+                compile 'com.google.guava:guava:19.0'
+                compile 'javax.servlet.jsp:jsp-api:2.2' because 'old jsp-api is incompatible with jersey'
+                compile 'org.apache.parquet:parquet-hadoop:1.10.1-palantir.3' force true
+                compile 'org.apache.parquet:parquet-column:1.10.1-palantir.3' force true
+                compile 'org.apache.parquet:parquet-common:1.10.1-palantir.3' force true
+                compile 'org.apache.parquet:parquet-encoding:1.10.1-palantir.3' force true
+                compile 'io.dropwizard.metrics:metrics-annotation:3.2.6' force true
+                compile 'io.dropwizard.metrics:metrics-core:3.2.6' force true
+                compile 'io.dropwizard.metrics:metrics-graphite:3.2.6' force true
+                compile 'io.dropwizard.metrics:metrics-healthchecks:3.2.6' force true
+                compile 'io.dropwizard.metrics:metrics-jersey2:3.2.6' force true
+                compile 'io.dropwizard.metrics:metrics-jetty9:3.2.6' force true
+                compile 'io.dropwizard.metrics:metrics-json:3.2.6' force true
+                compile 'io.dropwizard.metrics:metrics-jvm:3.2.6' force true
+                compile 'io.dropwizard.metrics:metrics-logback:3.2.6' force true
+                compile 'io.dropwizard.metrics:metrics-servlets:3.2.6' force true
+            }
+        }
+	}
+}
+
+configure(subprojects) {
+    apply plugin: 'java-library'
+    apply plugin: 'org.inferred.processors'
+
+    tasks.withType(JavaCompile) {
+        options.compilerArgs += ['-Werror']
+    }
+
+    tasks.check.dependsOn(javadoc)
+    sourceCompatibility = 1.8
+
+    configurations.all {
+        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'org.glassfish.hk2.external' && details.requested.name == 'javax.inject') {
+                details.useTarget group: 'javax.inject', name: 'javax.inject', version: '1'
+                details.because "The glassfish shaded copy is only necessary for OSGI environments, which we do not endorse."
+            }
+        }
+    }
+}
+

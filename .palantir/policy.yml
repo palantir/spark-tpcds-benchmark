@@ -1,0 +1,6 @@
+# Excavator auto-updates this file. Please contribute improvements to the central template:
+# https://github.palantir.build/foundry/policies/blob/master/foundry/default.policy.yml
+
+remote: foundry/policies
+path: foundry/default.policy.yml
+ref: master

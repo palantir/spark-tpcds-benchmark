@@ -1,0 +1,5 @@
+com.palantir.immutables.style:* = 1.2.0
+com.palantir.skylab:gofigure = 1.48.0
+org.immutables:* = 2.7.5
+org.apache.spark:spark-dist_2.11-hadoop-palantir-bom = 3.0.0-palantir.12
+com.google.guava:* = 19.0
