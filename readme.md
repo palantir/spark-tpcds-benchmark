@@ -49,7 +49,8 @@ You may use the configuration file provided in the repository as a template to f
 | `generateData`             | `boolean`            | Whether or not to generate data on startup before running benchmarks.|
 | `overwriteData`            | `boolean`            | Whether or not to overwrite generated data on startup, if `generateData` is set to true. This will also invalidate the computation results that are used to check for the correctness of a benchmark run.|
 | `dataScalesGb`             | `list<integer>`      | Data scales to run benchmarks, and generate data, on. Data scales are in GB. The entire benchmark suite is run once per data scale listed here.|
-| `dataGenerationParallelism`| `integer`            | Number of threads to use for generating benchmark data.| 
+| `dataGenerationParallelism`| `integer`            | Number of threads to use for generating benchmark data.|
+| `iterations`               | `integer`            | Number of iterations of the benchmarks to run.         |
 
 ## Spark Configuration
 
