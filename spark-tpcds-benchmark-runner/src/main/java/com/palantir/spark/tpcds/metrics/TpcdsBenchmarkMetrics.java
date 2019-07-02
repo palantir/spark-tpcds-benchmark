@@ -47,7 +47,7 @@ public final class TpcdsBenchmarkMetrics {
     }
 
     public void startBenchmark(String queryName, int scale) {
-        Preconditions.checkArgument(currentRunningQuery == null, "Can only run one query at a time.");
+        com.palantir.logsafe.Preconditions.checkArgument(currentRunningQuery == null, "Can only run one query at a time.");
         currentRunningQuery = RunningQuery.builder()
                 .queryName(queryName)
                 .scale(scale)
@@ -56,7 +56,7 @@ public final class TpcdsBenchmarkMetrics {
     }
 
     public void stopBenchmark() {
-        Preconditions.checkArgument(
+        com.palantir.logsafe.Preconditions.checkArgument(
                 currentRunningQuery != null, "No benchmark is currently running.");
         Stopwatch stopped = currentRunningQuery.timer();
         long endTime = System.currentTimeMillis();

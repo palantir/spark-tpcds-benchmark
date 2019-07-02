@@ -55,7 +55,7 @@ public final class TpcdsSchemas {
 
         Pattern pattern = Pattern.compile(String.format("create table %s\\n\\((.*?)\\);", table), Pattern.DOTALL);
         Matcher matcher = pattern.matcher(sqlSchemaDefinition);
-        Preconditions.checkArgument(
+        com.palantir.logsafe.Preconditions.checkArgument(
                 matcher.find(),
                 "SQL schema definition is ill-formatted");
         String group = matcher.group(1);

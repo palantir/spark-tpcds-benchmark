@@ -55,14 +55,14 @@ public interface TpcdsBenchmarkConfig {
 
     @Value.Check
     default void check() {
-        Preconditions.checkArgument(
+        com.palantir.logsafe.Preconditions.checkArgument(
                 iterations() > 0, "Iterations must be positive.");
-        Preconditions.checkArgument(
+        com.palantir.logsafe.Preconditions.checkArgument(
                 dataGenerationParallelism() > 0, "Data generation parallelism must be positive.");
-        Preconditions.checkArgument(!dataScalesGb().isEmpty(),
+        com.palantir.logsafe.Preconditions.checkArgument(!dataScalesGb().isEmpty(),
                 "Must specify at least one data scale to run benchmarks against.");
         dataScalesGb().forEach(scale -> {
-            Preconditions.checkArgument(scale > 0, "All data scales must be positive.");
+            com.palantir.logsafe.Preconditions.checkArgument(scale > 0, "All data scales must be positive.");
         });
     }
 
