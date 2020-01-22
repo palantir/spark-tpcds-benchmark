@@ -18,7 +18,7 @@ buildscript {
     repositories {
         jcenter()
         maven {
-            url "http://palantir.bintray.com/releases"
+            url 'https://palantir.bintray.com/releases'
         }
     }
 
@@ -49,7 +49,7 @@ allprojects {
     repositories {
         jcenter()
         maven {
-            url "http://palantir.bintray.com/releases"
+            url 'https://palantir.bintray.com/releases'
         }
     }
     // Configure BOMs as rootConfiguration dependencies
