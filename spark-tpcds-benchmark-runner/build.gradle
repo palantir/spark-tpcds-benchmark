@@ -22,18 +22,15 @@ plugins {
 dependencies {
     compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
     compile 'com.fasterxml.jackson.datatype:jackson-datatype-guava'
-    compile ('org.apache.spark:spark-sql_2.11') {
-        exclude group: 'com.google.guava'
-    }
     compile 'com.google.guava:guava'
+    compile 'org.apache.spark:spark-sql_2.11'
 
     testCompile 'junit:junit'
 
     annotationProcessor 'org.immutables:value'
     compileOnly 'org.immutables:value::annotations'
-    runtime ('org.apache.spark:spark-yarn_2.11') {
-        exclude group: 'com.google.guava'
-    }
+
+    runtime 'org.apache.spark:spark-yarn_2.11'
 }
 
 distribution {
