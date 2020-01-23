@@ -56,8 +56,7 @@ public final class TpcdsBenchmarkMetrics {
     }
 
     public void stopBenchmark() {
-        Preconditions.checkArgument(
-                currentRunningQuery != null, "No benchmark is currently running.");
+        Preconditions.checkArgument(currentRunningQuery != null, "No benchmark is currently running.");
         Stopwatch stopped = currentRunningQuery.timer();
         long endTime = System.currentTimeMillis();
         long elapsed = stopped.elapsed(TimeUnit.MILLISECONDS);
@@ -69,7 +68,8 @@ public final class TpcdsBenchmarkMetrics {
                 .executorInstances(config.spark().executorInstances())
                 .executorCores(config.spark().executorCores())
                 .executorMemoryMb(Utils.memoryStringToMb(config.spark().executorMemory()))
-                .sparkConf(JavaConverters.mapAsJavaMapConverter(spark.conf().getAll()).asJava())
+                .sparkConf(JavaConverters.mapAsJavaMapConverter(spark.conf().getAll())
+                        .asJava())
                 .applicationId(spark.sparkContext().applicationId())
                 .experimentStartTimestampMillis(startTime)
                 .experimentEndTimestampMillis(endTime)
@@ -87,7 +87,8 @@ public final class TpcdsBenchmarkMetrics {
     }
 
     public void flushMetrics() {
-        spark.createDataFrame(metrics, TpcdsBenchmarkMetric.SPARK_SCHEMA).write()
+        spark.createDataFrame(metrics, TpcdsBenchmarkMetric.SPARK_SCHEMA)
+                .write()
                 .mode(SaveMode.Append)
                 .format("json")
                 .save(paths.metricsDir());

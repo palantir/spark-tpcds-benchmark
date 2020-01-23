@@ -43,8 +43,7 @@ public final class TpcdsSchemas {
     private static final Pattern DECIMAL_PATTERN = Pattern.compile("decimal\\((\\d+),(\\d+)\\)");
 
     private final Map<TpcdsTable, StructType> schemas = new ConcurrentHashMap<>();
-    private final Supplier<String> cachedSqlSchemaDefinition =
-            Suppliers.memoize(TpcdsSchemas::getSqlSchemaDefinition);
+    private final Supplier<String> cachedSqlSchemaDefinition = Suppliers.memoize(TpcdsSchemas::getSqlSchemaDefinition);
 
     public StructType getSchema(TpcdsTable table) {
         return schemas.computeIfAbsent(table, this::doGetSchema);
@@ -55,16 +54,15 @@ public final class TpcdsSchemas {
 
         Pattern pattern = Pattern.compile(String.format("create table %s\\n\\((.*?)\\);", table), Pattern.DOTALL);
         Matcher matcher = pattern.matcher(sqlSchemaDefinition);
-        Preconditions.checkArgument(
-                matcher.find(),
-                "SQL schema definition is ill-formatted");
+        Preconditions.checkArgument(matcher.find(), "SQL schema definition is ill-formatted");
         String group = matcher.group(1);
 
         List<String> lines = Splitter.on('\n').splitToList(group);
         List<StructField> structFields = lines.stream()
                 .filter(line -> !line.contains("primary key"))
                 .filter(line -> !line.isEmpty())
-                .map(line -> Splitter.on(CharMatcher.whitespace()).omitEmptyStrings().splitToList(line))
+                .map(line ->
+                        Splitter.on(CharMatcher.whitespace()).omitEmptyStrings().splitToList(line))
                 .map(groups -> DataTypes.createStructField(groups.get(0), toSparkType(groups.get(1)), true))
                 .collect(Collectors.toList());
 
@@ -91,9 +89,9 @@ public final class TpcdsSchemas {
 
     private static String getSqlSchemaDefinition() {
         try (InputStream schemaSqlDefinition =
-                TpcdsDataGenerator.class.getClassLoader().getResourceAsStream("tpcds.sql");
-                InputStreamReader schemaSqlReader = new InputStreamReader(
-                        schemaSqlDefinition, StandardCharsets.UTF_8)) {
+                        TpcdsDataGenerator.class.getClassLoader().getResourceAsStream("tpcds.sql");
+                InputStreamReader schemaSqlReader =
+                        new InputStreamReader(schemaSqlDefinition, StandardCharsets.UTF_8)) {
             return CharStreams.toString(schemaSqlReader);
         } catch (IOException e) {
             throw new RuntimeException(e);

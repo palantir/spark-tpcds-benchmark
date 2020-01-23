@@ -33,10 +33,7 @@ public final class TpcdsTableRegistration {
     private final TpcdsSchemas schemas;
 
     public TpcdsTableRegistration(
-            TpcdsPaths paths,
-            FileSystem dataFileSystem,
-            SparkSession spark,
-            TpcdsSchemas schemas) {
+            TpcdsPaths paths, FileSystem dataFileSystem, SparkSession spark, TpcdsSchemas schemas) {
         this.paths = paths;
         this.dataFileSystem = dataFileSystem;
         this.spark = spark;
@@ -49,11 +46,9 @@ public final class TpcdsTableRegistration {
                 String tableLocation = paths.tableParquetLocation(scale, table);
                 Path tablePath = new Path(tableLocation);
                 if (!dataFileSystem.isDirectory(tablePath)) {
-                    throw new IllegalArgumentException(
-                            String.format(
-                                    "Table %s not found in Parquet format at %s; was the data generated accordingly?",
-                                    table,
-                                    tableLocation));
+                    throw new IllegalArgumentException(String.format(
+                            "Table %s not found in Parquet format at %s; was the data generated accordingly?",
+                            table, tableLocation));
                 }
                 spark.read()
                         .format("parquet")

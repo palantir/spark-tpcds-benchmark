@@ -58,47 +58,38 @@ public abstract class TpcdsBenchmarkMetric implements Serializable {
     public abstract long experimentEndTimestampMillis();
 
     public static StructType schema() {
-        return new StructType(
-                new StructField[] {
-                        new StructField(
-                                "queryName", DataTypes.StringType, false, Metadata.empty()),
-                        new StructField(
-                                "scale", DataTypes.IntegerType, false, Metadata.empty()),
-                        new StructField(
-                                "sparkVersion", DataTypes.StringType, false, Metadata.empty()),
-                        new StructField(
-                                "executorInstances", DataTypes.IntegerType, true, Metadata.empty()),
-                        new StructField("executorMemoryMb", DataTypes.LongType, false, Metadata.empty()),
-                        new StructField("executorCores", DataTypes.IntegerType, false, Metadata.empty()),
-                        new StructField("applicationId", DataTypes.StringType, false, Metadata.empty()),
-                        new StructField("durationMillis", DataTypes.LongType, false, Metadata.empty()),
-                        new StructField(
-                                "sparkConf",
-                                DataTypes.createMapType(DataTypes.StringType, DataTypes.StringType),
-                                true,
-                                Metadata.empty()),
-                        new StructField(
-                                "experimentStartTimestamp", DataTypes.TimestampType, false, Metadata.empty()),
-                        new StructField(
-                                "experimentEndTimestamp", DataTypes.TimestampType, false, Metadata.empty())
-                });
+        return new StructType(new StructField[] {
+            new StructField("queryName", DataTypes.StringType, false, Metadata.empty()),
+            new StructField("scale", DataTypes.IntegerType, false, Metadata.empty()),
+            new StructField("sparkVersion", DataTypes.StringType, false, Metadata.empty()),
+            new StructField("executorInstances", DataTypes.IntegerType, true, Metadata.empty()),
+            new StructField("executorMemoryMb", DataTypes.LongType, false, Metadata.empty()),
+            new StructField("executorCores", DataTypes.IntegerType, false, Metadata.empty()),
+            new StructField("applicationId", DataTypes.StringType, false, Metadata.empty()),
+            new StructField("durationMillis", DataTypes.LongType, false, Metadata.empty()),
+            new StructField(
+                    "sparkConf",
+                    DataTypes.createMapType(DataTypes.StringType, DataTypes.StringType),
+                    true,
+                    Metadata.empty()),
+            new StructField("experimentStartTimestamp", DataTypes.TimestampType, false, Metadata.empty()),
+            new StructField("experimentEndTimestamp", DataTypes.TimestampType, false, Metadata.empty())
+        });
     }
 
     public final Row toRow() {
-        return Row$.MODULE$.apply(
-                JavaConverters.asScalaBufferConverter(
-                        ImmutableList.of(
-                                queryName(),
-                                scale(),
-                                sparkVersion(),
-                                executorInstances(),
-                                executorMemoryMb(),
-                                executorCores(),
-                                applicationId(),
-                                durationMillis(),
-                                JavaConverters.mapAsScalaMapConverter(sparkConf()).asScala(),
-                                new java.sql.Timestamp(experimentStartTimestampMillis()),
-                                new java.sql.Timestamp(experimentEndTimestampMillis())))
+        return Row$.MODULE$.apply(JavaConverters.asScalaBufferConverter(ImmutableList.of(
+                        queryName(),
+                        scale(),
+                        sparkVersion(),
+                        executorInstances(),
+                        executorMemoryMb(),
+                        executorCores(),
+                        applicationId(),
+                        durationMillis(),
+                        JavaConverters.mapAsScalaMapConverter(sparkConf()).asScala(),
+                        new java.sql.Timestamp(experimentStartTimestampMillis()),
+                        new java.sql.Timestamp(experimentEndTimestampMillis())))
                 .asScala());
     }
 
@@ -107,5 +98,4 @@ public abstract class TpcdsBenchmarkMetric implements Serializable {
     }
 
     public static final class Builder extends ImmutableTpcdsBenchmarkMetric.Builder {}
-
 }

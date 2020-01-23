@@ -48,46 +48,40 @@ public final class TpcdsQueryCorrectnessChecks {
     private final FileSystem dataFileSystem;
     private final SparkSession spark;
 
-    public TpcdsQueryCorrectnessChecks(
-            TpcdsPaths paths,
-            FileSystem dataFileSystem,
-            SparkSession spark) {
+    public TpcdsQueryCorrectnessChecks(TpcdsPaths paths, FileSystem dataFileSystem, SparkSession spark) {
         this.paths = paths;
         this.dataFileSystem = dataFileSystem;
         this.spark = spark;
     }
 
     public void verifyCorrectness(
-            int scale,
-            String queryName,
-            String sqlStatement,
-            StructType resultSchema,
-            String resultsPath) throws IOException {
+            int scale, String queryName, String sqlStatement, StructType resultSchema, String resultsPath)
+            throws IOException {
         spark.sparkContext().setJobDescription(String.format("%s-table-hash-correctness", queryName));
-        Dataset<Row> writtenResult = spark.read().format("parquet").schema(resultSchema).load(resultsPath);
-        byte[] resultHash = writtenResult.javaRDD()
+        Dataset<Row> writtenResult = spark.read()
+                .format("parquet")
+                .schema(resultSchema)
+                .load(resultsPath);
+        byte[] resultHash = writtenResult
+                .javaRDD()
                 .map(SingleHashFunction.INSTANCE)
                 .map(hashCode -> SerializableOptional.of(hashCode))
                 .fold(SerializableOptional.empty(), CombineHashFunction.INSTANCE)
                 .optional
                 .map(HashCode::asBytes)
-                .orElse(new byte[]{});
+                .orElse(new byte[] {});
         Path hashCodePath = new Path(paths.experimentCorrectnessHashesLocation(scale, queryName));
         if (dataFileSystem.isFile(hashCodePath)) {
             try (InputStream previousHashCodeInput = dataFileSystem.open(hashCodePath)) {
                 byte[] previousHashCodeBytes = ByteStreams.toByteArray(previousHashCodeInput);
                 if (!Arrays.equals(resultHash, previousHashCodeBytes)) {
-                    throw new ExperimentResultsIncorrectException(
-                            String.format(
-                                    "Experiment results were incorrect.\n"
-                                            + "Experiment name: %s\n"
-                                            + "Experiment scale: %d\n"
-                                            + "Experiment results path: %s\n"
-                                            + "Experiment sql:\n\n%s",
-                                    queryName,
-                                    scale,
-                                    resultsPath,
-                                    sqlStatement));
+                    throw new ExperimentResultsIncorrectException(String.format(
+                            "Experiment results were incorrect.\n"
+                                    + "Experiment name: %s\n"
+                                    + "Experiment scale: %d\n"
+                                    + "Experiment results path: %s\n"
+                                    + "Experiment sql:\n\n%s",
+                            queryName, scale, resultsPath, sqlStatement));
                 }
             }
         } else {
@@ -107,11 +101,12 @@ public final class TpcdsQueryCorrectnessChecks {
         }
     }
 
-    private static final class CombineHashFunction implements Function2<
-            SerializableOptional<HashCode>,
-            SerializableOptional<HashCode>,
-            SerializableOptional<HashCode>>,
-            Serializable {
+    private static final class CombineHashFunction
+            implements Function2<
+                            SerializableOptional<HashCode>,
+                            SerializableOptional<HashCode>,
+                            SerializableOptional<HashCode>>,
+                    Serializable {
 
         static final CombineHashFunction INSTANCE = new CombineHashFunction();
 
@@ -119,9 +114,8 @@ public final class TpcdsQueryCorrectnessChecks {
         public SerializableOptional<HashCode> call(
                 SerializableOptional<HashCode> first, SerializableOptional<HashCode> second) {
             if (first.optional.isPresent() && second.optional.isPresent()) {
-                return SerializableOptional.of(
-                        Hashing.combineUnordered(
-                                () -> Stream.of(first.optional.get(), second.optional.get()).iterator()));
+                return SerializableOptional.of(Hashing.combineUnordered(() ->
+                        Stream.of(first.optional.get(), second.optional.get()).iterator()));
             } else if (!first.optional.isPresent() && !second.optional.isPresent()) {
                 return SerializableOptional.empty();
             } else if (first.optional.isPresent()) {

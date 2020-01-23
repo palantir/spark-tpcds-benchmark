@@ -56,10 +56,8 @@ public final class TpcdsDataGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(TpcdsDataGenerator.class);
 
-    private static final Path DSDGEN_TGZ_MACOS_PATH = Paths.get(
-            "service", "bin", "tpcds", "tpcds_osx.tgz");
-    private static final Path DSDGEN_TGZ_LINUX_PATH = Paths.get(
-            "service", "bin", "tpcds", "tpcds_linux.tgz");
+    private static final Path DSDGEN_TGZ_MACOS_PATH = Paths.get("service", "bin", "tpcds", "tpcds_osx.tgz");
+    private static final Path DSDGEN_TGZ_LINUX_PATH = Paths.get("service", "bin", "tpcds", "tpcds_linux.tgz");
     private static final String TPCDS_BIN_DIR_NAME = "tpcds-bin";
     private static final String DSDGEN_BINARY_FILE_NAME = "dsdgen";
 
@@ -93,15 +91,13 @@ public final class TpcdsDataGenerator {
                 FileUtils.deleteDirectory(tempDir.toFile());
             }
             if (!tempDir.toFile().mkdirs()) {
-                throw new IllegalStateException(
-                        String.format("Could not create dsdgen work directory at %s", tempDir));
+                throw new IllegalStateException(String.format("Could not create dsdgen work directory at %s", tempDir));
             }
             tempDir.toFile().deleteOnExit();
             try {
                 final Path dsdgenFile = extractTpcdsBinary(tempDir);
                 config.dataScalesGb().stream()
-                        .map(scale -> generateAndUploadDataForScale(
-                                scale, tempDir, dsdgenFile))
+                        .map(scale -> generateAndUploadDataForScale(scale, tempDir, dsdgenFile))
                         .collect(Collectors.toList()) // Always collect to force kick off all tasks
                         .forEach(TpcdsDataGenerator::waitForFuture);
             } catch (Exception e) {
@@ -115,30 +111,20 @@ public final class TpcdsDataGenerator {
                 try {
                     FileUtils.deleteDirectory(tempDir.toFile());
                 } catch (IOException e) {
-                    log.warn(
-                            "Failed to delete temporary working directory.",
-                            SafeArg.of("dsdgenWorkDir", tempDir),
-                            e);
+                    log.warn("Failed to delete temporary working directory.", SafeArg.of("dsdgenWorkDir", tempDir), e);
                 }
             }
         }
     }
 
-    private ListenableFuture<?> generateAndUploadDataForScale(
-            int scale,
-            Path tempDir,
-            Path resolvedDsdgenFile) {
+    private ListenableFuture<?> generateAndUploadDataForScale(int scale, Path tempDir, Path resolvedDsdgenFile) {
         ListenableFuture<?> uploadDataForScaleTask = dataGeneratorThreadPool.submit(() -> {
             try {
-                org.apache.hadoop.fs.Path rootDataPath = new org.apache.hadoop.fs.Path(
-                        paths.tpcdsCsvDir(scale));
+                org.apache.hadoop.fs.Path rootDataPath = new org.apache.hadoop.fs.Path(paths.tpcdsCsvDir(scale));
                 if (!dataFileSystem.exists(rootDataPath) || config.overwriteData()) {
-                    if (dataFileSystem.isDirectory(rootDataPath)
-                            && !dataFileSystem.delete(rootDataPath, true)) {
+                    if (dataFileSystem.isDirectory(rootDataPath) && !dataFileSystem.delete(rootDataPath, true)) {
                         throw new IllegalStateException(
-                                String.format(
-                                        "Failed to clear data file directory at %s.",
-                                        rootDataPath));
+                                String.format("Failed to clear data file directory at %s.", rootDataPath));
                     }
                 } else {
                     log.info(
@@ -149,14 +135,10 @@ public final class TpcdsDataGenerator {
                 }
                 invalidateHashesIfNecessary(scale);
 
-                File tpcdsTempDir = new File(
-                        tempDir.resolve("tpcds-data").toFile(),
-                        Integer.toString(scale));
+                File tpcdsTempDir = new File(tempDir.resolve("tpcds-data").toFile(), Integer.toString(scale));
                 if (!tpcdsTempDir.mkdirs()) {
                     throw new IllegalStateException(
-                            String.format(
-                                    "Failed to make tpcds temporary data dir at %s",
-                                    tpcdsTempDir));
+                            String.format("Failed to make tpcds temporary data dir at %s", tpcdsTempDir));
                 }
                 Process dsdgenProcess = new ProcessBuilder()
                         .command(
@@ -174,12 +156,9 @@ public final class TpcdsDataGenerator {
                         .start();
                 int returnCode = dsdgenProcess.waitFor();
                 if (returnCode != 0) {
-                    throw new IllegalStateException(
-                            String.format("Dsdgen failed with return code %d", returnCode));
+                    throw new IllegalStateException(String.format("Dsdgen failed with return code %d", returnCode));
                 }
-                log.info(
-                        "Finished running dsdgen for the following data scale.",
-                        SafeArg.of("scale", scale));
+                log.info("Finished running dsdgen for the following data scale.", SafeArg.of("scale", scale));
                 log.info(
                         "Uploading tpcds data from the following location.",
                         SafeArg.of("localLocation", tpcdsTempDir.getAbsolutePath()));
@@ -189,10 +168,9 @@ public final class TpcdsDataGenerator {
                 throw new RuntimeException(e);
             }
         });
-        uploadDataForScaleTask.addListener(() ->
-                log.info(
-                        "Finished uploading data for data at the following scale.",
-                        SafeArg.of("scale", scale)), dataGeneratorThreadPool);
+        uploadDataForScaleTask.addListener(
+                () -> log.info("Finished uploading data for data at the following scale.", SafeArg.of("scale", scale)),
+                dataGeneratorThreadPool);
         return uploadDataForScaleTask;
     }
 
@@ -203,34 +181,31 @@ public final class TpcdsDataGenerator {
         if (dataFileSystem.exists(correctnessHashesRoot)
                 && config.overwriteData()
                 && !dataFileSystem.delete(correctnessHashesRoot, true)) {
-            throw new IllegalStateException(
-                    String.format(
-                            "Failed to clear the correctness hashes result directory at %s.",
-                            correctnessHashesRoot));
+            throw new IllegalStateException(String.format(
+                    "Failed to clear the correctness hashes result directory at %s.", correctnessHashesRoot));
         }
     }
 
     private void saveTablesAsParquet(int scale) {
         Stream.of(TpcdsTable.values())
                 .map(table -> {
-                    ListenableFuture<?> saveAsParquetTask =
-                            dataGeneratorThreadPool.submit(() -> {
-                                StructType schema = schemas.getSchema(table);
-                                Dataset<Row> tableDataset = spark
-                                        .read()
-                                        .format("csv")
-                                        .option("delimiter", "|")
-                                        .schema(schema)
-                                        .load(paths.tableCsvFile(scale, table));
-                                tableDataset.write().format("parquet").save(
-                                        paths.tableParquetLocation(scale, table));
-                            });
-                    saveAsParquetTask.addListener(() -> {
-                        log.info(
-                                "Saved a table as parquet at the following scale.",
-                                SafeArg.of("table", table),
-                                SafeArg.of("scale", scale));
-                    }, dataGeneratorThreadPool);
+                    ListenableFuture<?> saveAsParquetTask = dataGeneratorThreadPool.submit(() -> {
+                        StructType schema = schemas.getSchema(table);
+                        Dataset<Row> tableDataset = spark.read()
+                                .format("csv")
+                                .option("delimiter", "|")
+                                .schema(schema)
+                                .load(paths.tableCsvFile(scale, table));
+                        tableDataset.write().format("parquet").save(paths.tableParquetLocation(scale, table));
+                    });
+                    saveAsParquetTask.addListener(
+                            () -> {
+                                log.info(
+                                        "Saved a table as parquet at the following scale.",
+                                        SafeArg.of("table", table),
+                                        SafeArg.of("scale", scale));
+                            },
+                            dataGeneratorThreadPool);
                     return saveAsParquetTask;
                 })
                 .collect(Collectors.toList())
@@ -253,15 +228,11 @@ public final class TpcdsDataGenerator {
                         }
                     });
                     uploadCsvTask.addListener(
-                            () ->
-                                    log.info(
-                                            "Finished uploading CSV to the Hadoop File System.",
-                                            SafeArg.of("localFilePath", file),
-                                            SafeArg.of(
-                                                    "destination",
-                                                    new org.apache.hadoop.fs.Path(
-                                                            rootDataPath,
-                                                            file.getName()))),
+                            () -> log.info(
+                                    "Finished uploading CSV to the Hadoop File System.",
+                                    SafeArg.of("localFilePath", file),
+                                    SafeArg.of("destination", new org.apache.hadoop.fs.Path(
+                                            rootDataPath, file.getName()))),
                             dataGeneratorThreadPool);
                     return uploadCsvTask;
                 })
@@ -292,19 +263,20 @@ public final class TpcdsDataGenerator {
                     if (!dsdgenFile.toFile().canExecute()
                             && !dsdgenFile.toFile().setExecutable(true, true)) {
                         throw new IllegalStateException(
-                                String.format(
-                                        "Could not make the dsdgen binary at %s executable.",
-                                        dsdgenFile));
+                                String.format("Could not make the dsdgen binary at %s executable.", dsdgenFile));
                     }
                 }
             }
         } catch (Exception e) {
             throw new RuntimeException(
-                    String.format("Failed to extract tpcds tar at %s", dsdgenTgzPath.toFile().getAbsolutePath()), e);
+                    String.format(
+                            "Failed to extract tpcds tar at %s",
+                            dsdgenTgzPath.toFile().getAbsolutePath()),
+                    e);
         }
         if (dsdgenFile == null) {
-            throw new FileNotFoundException("Dsdgen binary was not found in the tarball;"
-                    + " was this benchmark runner packaged correctly?");
+            throw new FileNotFoundException(
+                    "Dsdgen binary was not found in the tarball;" + " was this benchmark runner packaged correctly?");
         }
         return dsdgenFile;
     }
@@ -312,18 +284,16 @@ public final class TpcdsDataGenerator {
     private Path findDsdgenTgz() throws FileNotFoundException {
         Path dsdgenTgzPath;
         if (SystemUtils.IS_OS_WINDOWS) {
-            throw new UnsupportedOperationException(
-                    "Cannot generate data using Windows.");
+            throw new UnsupportedOperationException("Cannot generate data using Windows.");
         } else if (SystemUtils.IS_OS_MAC) {
             dsdgenTgzPath = DSDGEN_TGZ_MACOS_PATH;
         } else {
             dsdgenTgzPath = DSDGEN_TGZ_LINUX_PATH;
         }
         if (!dsdgenTgzPath.toFile().isFile()) {
-            throw new FileNotFoundException(
-                    String.format(
-                            "Dsdgen tarball not found at %s; was this benchmark runner"
-                                    + " packaged correctly?", dsdgenTgzPath));
+            throw new FileNotFoundException(String.format(
+                    "Dsdgen tarball not found at %s; was this benchmark runner" + " packaged correctly?",
+                    dsdgenTgzPath));
         }
         return dsdgenTgzPath;
     }
