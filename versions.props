@@ -1,5 +1,7 @@
+com.google.guava:guava = 27.0.1-jre
 com.palantir.immutables.style:* = 1.2.0
-com.palantir.skylab:gofigure = 1.48.0
+io.dropwizard.metrics:* = 3.2.6
 org.immutables:* = 2.7.5
+org.apache.parquet:* = 1.12.0-palantir.6
 org.apache.spark:spark-dist_2.11-hadoop-palantir-bom = 3.0.0-palantir.59
-com.google.guava:* = 19.0
+
