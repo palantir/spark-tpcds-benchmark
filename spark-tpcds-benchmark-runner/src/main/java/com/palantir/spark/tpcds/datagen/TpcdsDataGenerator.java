@@ -177,7 +177,8 @@ public final class TpcdsDataGenerator {
                     throw new IllegalStateException(
                             String.format("Dsdgen failed with return code %d", returnCode));
                 }
-                log.info("Finished running dsdgen for the following data scale.",
+                log.info(
+                        "Finished running dsdgen for the following data scale.",
                         SafeArg.of("scale", scale));
                 log.info(
                         "Uploading tpcds data from the following location.",
@@ -225,7 +226,8 @@ public final class TpcdsDataGenerator {
                                         paths.tableParquetLocation(scale, table));
                             });
                     saveAsParquetTask.addListener(() -> {
-                        log.info("Saved a table as parquet at the following scale.",
+                        log.info(
+                                "Saved a table as parquet at the following scale.",
                                 SafeArg.of("table", table),
                                 SafeArg.of("scale", scale));
                     }, dataGeneratorThreadPool);
@@ -250,11 +252,15 @@ public final class TpcdsDataGenerator {
                             throw new RuntimeException(e);
                         }
                     });
-                    uploadCsvTask.addListener(() ->
-                                    log.info("Finished uploading CSV to the Hadoop File System.",
+                    uploadCsvTask.addListener(
+                            () ->
+                                    log.info(
+                                            "Finished uploading CSV to the Hadoop File System.",
                                             SafeArg.of("localFilePath", file),
-                                            SafeArg.of("destination",
-                                                    new org.apache.hadoop.fs.Path(rootDataPath,
+                                            SafeArg.of(
+                                                    "destination",
+                                                    new org.apache.hadoop.fs.Path(
+                                                            rootDataPath,
                                                             file.getName()))),
                             dataGeneratorThreadPool);
                     return uploadCsvTask;
@@ -318,7 +324,6 @@ public final class TpcdsDataGenerator {
                     String.format(
                             "Dsdgen tarball not found at %s; was this benchmark runner"
                                     + " packaged correctly?", dsdgenTgzPath));
-
         }
         return dsdgenTgzPath;
     }
