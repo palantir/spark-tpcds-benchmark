@@ -5,7 +5,8 @@ dsdgenWorkLocalDir: /tmp/tpcds_work_dir
 generateData: true
 hadoop:
   hadoopConf:
-    fs.defaultFS: hdfs://localhost:8020
+    #fs.defaultFS: hdfs://localhost:8020
+    fs.defaultFS: file:///tmp/hdfs
 overwriteData: false
 spark:
   executorCores: 1
@@ -14,5 +15,6 @@ spark:
   master: local[4]
   sparkConf:
     spark.yarn.jars: service/lib/*
-testDataDir: hdfs://localhost:8020/data/tpcds/test_data
+#testDataDir: hdfs://localhost:8020/data/tpcds/test_data
+testDataDir: file:///tmp/hdfs/data/tpcds/test_data
 iterations: 1
