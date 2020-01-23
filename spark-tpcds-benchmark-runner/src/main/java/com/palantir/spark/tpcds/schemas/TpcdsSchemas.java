@@ -17,11 +17,10 @@
 package com.palantir.spark.tpcds.schemas;
 
 import com.google.common.base.CharMatcher;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Maps;
 import com.google.common.io.CharStreams;
+import com.palantir.logsafe.Preconditions;
 import com.palantir.spark.tpcds.constants.TpcdsTable;
 import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
 import java.io.IOException;
@@ -30,6 +29,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -42,7 +42,7 @@ import org.apache.spark.sql.types.StructType;
 public final class TpcdsSchemas {
     private static final Pattern DECIMAL_PATTERN = Pattern.compile("decimal\\((\\d+),(\\d+)\\)");
 
-    private final Map<TpcdsTable, StructType> schemas = Maps.newConcurrentMap();
+    private final Map<TpcdsTable, StructType> schemas = new ConcurrentHashMap<>();
     private final Supplier<String> cachedSqlSchemaDefinition =
             Suppliers.memoize(TpcdsSchemas::getSqlSchemaDefinition);
 

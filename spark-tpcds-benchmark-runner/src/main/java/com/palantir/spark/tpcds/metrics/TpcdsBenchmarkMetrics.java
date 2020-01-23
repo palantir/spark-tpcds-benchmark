@@ -16,12 +16,12 @@
 
 package com.palantir.spark.tpcds.metrics;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
+import com.palantir.logsafe.Preconditions;
 import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
 import com.palantir.spark.tpcds.immutables.ImmutablesStyle;
 import com.palantir.spark.tpcds.paths.TpcdsPaths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.spark.sql.Row;
@@ -34,7 +34,7 @@ import scala.collection.JavaConverters;
 public final class TpcdsBenchmarkMetrics {
 
     private final TpcdsBenchmarkConfig config;
-    private final List<Row> metrics = Lists.newArrayList();
+    private final List<Row> metrics = new ArrayList<>();
     private final TpcdsPaths paths;
     private final SparkSession spark;
     private RunningQuery currentRunningQuery;

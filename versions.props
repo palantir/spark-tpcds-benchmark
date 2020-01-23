@@ -1,5 +1,6 @@
 com.google.guava:guava = 27.0.1-jre
 com.palantir.immutables.style:* = 1.2.0
+com.palantir.safe-logging:preconditions:1.12.2
 io.dropwizard.metrics:* = 3.2.6
 javax.servlet.jsp:jsp-api:2.2
 org.immutables:* = 2.7.5

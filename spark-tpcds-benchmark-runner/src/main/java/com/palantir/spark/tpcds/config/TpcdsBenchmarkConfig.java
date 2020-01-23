@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.google.common.base.Preconditions;
+import com.palantir.logsafe.Preconditions;
 import com.palantir.spark.tpcds.immutables.ImmutablesConfigStyle;
 import java.io.IOException;
 import java.nio.file.Path;
