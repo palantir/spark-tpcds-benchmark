@@ -17,6 +17,7 @@
 plugins {
     id 'com.palantir.docker' version '0.21.0'
     id 'com.palantir.sls-java-service-distribution'
+    id 'maven-publish'
 }
 
 dependencies {
