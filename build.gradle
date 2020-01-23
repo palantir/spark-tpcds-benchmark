@@ -17,6 +17,7 @@
 buildscript {
     repositories {
         jcenter()
+        mavenCentral()
         maven {
             url 'https://palantir.bintray.com/releases'
         }
@@ -48,6 +49,7 @@ allprojects {
 
     repositories {
         jcenter()
+        mavenCentral()
         maven {
             url 'https://palantir.bintray.com/releases'
         }
@@ -56,28 +58,6 @@ allprojects {
     dependencies {
         rootConfiguration platform("org.apache.spark:spark-dist_2.11-hadoop-palantir-bom")
     }
-    pluginManager.withPlugin 'java', {
-        dependencies {
-            constraints {
-                compile 'com.google.guava:guava:19.0'
-                compile 'javax.servlet.jsp:jsp-api:2.2' because 'old jsp-api is incompatible with jersey'
-                compile 'org.apache.parquet:parquet-hadoop:1.10.1-palantir.3' force true
-                compile 'org.apache.parquet:parquet-column:1.10.1-palantir.3' force true
-                compile 'org.apache.parquet:parquet-common:1.10.1-palantir.3' force true
-                compile 'org.apache.parquet:parquet-encoding:1.10.1-palantir.3' force true
-                compile 'io.dropwizard.metrics:metrics-annotation:3.2.6' force true
-                compile 'io.dropwizard.metrics:metrics-core:3.2.6' force true
-                compile 'io.dropwizard.metrics:metrics-graphite:3.2.6' force true
-                compile 'io.dropwizard.metrics:metrics-healthchecks:3.2.6' force true
-                compile 'io.dropwizard.metrics:metrics-jersey2:3.2.6' force true
-                compile 'io.dropwizard.metrics:metrics-jetty9:3.2.6' force true
-                compile 'io.dropwizard.metrics:metrics-json:3.2.6' force true
-                compile 'io.dropwizard.metrics:metrics-jvm:3.2.6' force true
-                compile 'io.dropwizard.metrics:metrics-logback:3.2.6' force true
-                compile 'io.dropwizard.metrics:metrics-servlets:3.2.6' force true
-            }
-        }
-	}
 }
 
 configure(subprojects) {
@@ -90,14 +70,5 @@ configure(subprojects) {
 
     tasks.check.dependsOn(javadoc)
     sourceCompatibility = 1.8
-
-    configurations.all {
-        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.glassfish.hk2.external' && details.requested.name == 'javax.inject') {
-                details.useTarget group: 'javax.inject', name: 'javax.inject', version: '1'
-                details.because "The glassfish shaded copy is only necessary for OSGI environments, which we do not endorse."
-            }
-        }
-    }
 }
 
