@@ -58,10 +58,8 @@ public final class TpcdsQueryCorrectnessChecks {
             int scale, String queryName, String sqlStatement, StructType resultSchema, String resultsPath)
             throws IOException {
         spark.sparkContext().setJobDescription(String.format("%s-table-hash-correctness", queryName));
-        Dataset<Row> writtenResult = spark.read()
-                .format("parquet")
-                .schema(resultSchema)
-                .load(resultsPath);
+        Dataset<Row> writtenResult =
+                spark.read().format("parquet").schema(resultSchema).load(resultsPath);
         byte[] resultHash = writtenResult
                 .javaRDD()
                 .map(SingleHashFunction.INSTANCE)
