@@ -58,13 +58,13 @@ allprojects {
     dependencies {
         rootConfiguration platform("org.apache.spark:spark-dist_2.11-hadoop-palantir-bom")
     }
-    pluginManager.withPlugin 'java', {
-        dependencies {
-            constraints {
-                compile 'javax.servlet.jsp:jsp-api:2.2' because 'old jsp-api is incompatible with jersey'
-            }
-        }
-    }
+//    pluginManager.withPlugin 'java', {
+//         dependencies {
+//            constraints {
+//                compile 'javax.servlet.jsp:jsp-api:2.2' because 'old jsp-api is incompatible with jersey'
+//            }
+//        }
+//    }
 }
 
 configure(subprojects) {
@@ -77,14 +77,5 @@ configure(subprojects) {
 
     tasks.check.dependsOn(javadoc)
     sourceCompatibility = 1.8
-
-    configurations.all {
-        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.glassfish.hk2.external' && details.requested.name == 'javax.inject') {
-                details.useTarget group: 'javax.inject', name: 'javax.inject', version: '1'
-                details.because "The glassfish shaded copy is only necessary for OSGI environments, which we do not endorse."
-            }
-        }
-    }
 }
 
