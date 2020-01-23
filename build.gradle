@@ -58,13 +58,6 @@ allprojects {
     dependencies {
         rootConfiguration platform("org.apache.spark:spark-dist_2.11-hadoop-palantir-bom")
     }
-//    pluginManager.withPlugin 'java', {
-//         dependencies {
-//            constraints {
-//                compile 'javax.servlet.jsp:jsp-api:2.2' because 'old jsp-api is incompatible with jersey'
-//            }
-//        }
-//    }
 }
 
 configure(subprojects) {
