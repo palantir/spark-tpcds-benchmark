@@ -46,14 +46,8 @@ public final class TpcdsBenchmark {
 
     private static final Logger log = LoggerFactory.getLogger(TpcdsBenchmark.class);
 
-    private static final ImmutableSet<String> BLACKLISTED_QUERIES = ImmutableSet.of(
-            "q23b.sql",
-            "q39a.sql",
-            "q39b.sql",
-            "q14b.sql",
-            "q49.sql",
-            "q64.sql",
-            "q77.sql");
+    private static final ImmutableSet<String> BLACKLISTED_QUERIES =
+            ImmutableSet.of("q23b.sql", "q39a.sql", "q39b.sql", "q14b.sql", "q49.sql", "q64.sql", "q77.sql");
 
     private final TpcdsBenchmarkConfig config;
     private final TpcdsDataGenerator dataGenerator;
@@ -87,25 +81,21 @@ public final class TpcdsBenchmark {
     public void run() throws IOException {
         dataGenerator.generateDataIfNecessary();
         for (int iteration = 0; iteration < config.iterations(); iteration++) {
-            log.info("Beginning benchmark iteration.",
+            log.info(
+                    "Beginning benchmark iteration.",
                     SafeArg.of("currentIteration", iteration),
                     SafeArg.of("totalNumIterations", config.iterations()));
             config.dataScalesGb().forEach(scale -> {
-                log.info("Beginning benchmarks at a new data scale.",
-                        SafeArg.of("dataScale", scale));
+                log.info("Beginning benchmarks at a new data scale.", SafeArg.of("dataScale", scale));
                 registration.registerTables(scale);
                 queries.get().forEach((queryName, query) -> {
-                    log.info("Running query.",
-                            SafeArg.of("queryName", queryName),
-                            SafeArg.of("queryStatement", query));
+                    log.info("Running query.", SafeArg.of("queryName", queryName), SafeArg.of("queryStatement", query));
                     try {
                         String resultLocation = paths.experimentResultLocation(scale, queryName);
                         Path resultPath = new Path(resultLocation);
                         if (dataFileSystem.exists(resultPath) && !dataFileSystem.delete(resultPath, true)) {
-                            throw new IllegalStateException(
-                                    String.format(
-                                            "Failed to clear experiment result destination directory at %s.",
-                                            resultPath));
+                            throw new IllegalStateException(String.format(
+                                    "Failed to clear experiment result destination directory at %s.", resultPath));
                         }
                         Dataset<Row> queryResultDataset = sanitizeColumnNames(spark.sql(query));
                         spark.sparkContext().setJobDescription(String.format("%s-benchmark", queryName));
@@ -121,23 +111,25 @@ public final class TpcdsBenchmark {
                                 metrics.abortBenchmark();
                             }
                         }
-                        log.info("Successfully ran query. Will now proceed to verify the correctness.",
+                        log.info(
+                                "Successfully ran query. Will now proceed to verify the correctness.",
                                 SafeArg.of("queryName", queryName),
                                 SafeArg.of("scale", scale));
                         correctness.verifyCorrectness(
                                 scale, queryName, query, queryResultDataset.schema(), resultLocation);
-                        log.info("Successfully verified correctness of a query.",
+                        log.info(
+                                "Successfully verified correctness of a query.",
                                 SafeArg.of("queryName", queryName),
                                 SafeArg.of("scale", scale));
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
                 });
-                log.info("Successfully ran benchmarks at a given scale.",
-                        SafeArg.of("scale", scale));
+                log.info("Successfully ran benchmarks at a given scale.", SafeArg.of("scale", scale));
             });
             metrics.flushMetrics();
-            log.info("Successfully finished one iteration of benchmarks at all scales.",
+            log.info(
+                    "Successfully finished one iteration of benchmarks at all scales.",
                     SafeArg.of("completedIterations", iteration));
         }
         log.info("Successfully ran all benchmarks at the requested number of iterations. Exiting.");
@@ -146,9 +138,9 @@ public final class TpcdsBenchmark {
     private static Map<String, String> getQueries() {
         ImmutableMap.Builder<String, String> queries = ImmutableMap.builder();
         try (TarArchiveInputStream tarArchiveInputStream = new TarArchiveInputStream(
-                TpcdsBenchmark.class.getClassLoader().getResourceAsStream("queries.tar"));
-                InputStreamReader tarArchiveReader = new InputStreamReader(
-                        tarArchiveInputStream, StandardCharsets.UTF_8)) {
+                        TpcdsBenchmark.class.getClassLoader().getResourceAsStream("queries.tar"));
+                InputStreamReader tarArchiveReader =
+                        new InputStreamReader(tarArchiveInputStream, StandardCharsets.UTF_8)) {
             TarArchiveEntry entry;
             while ((entry = tarArchiveInputStream.getNextTarEntry()) != null) {
                 String queryString = CharStreams.toString(tarArchiveReader);

@@ -16,12 +16,12 @@
 
 package com.palantir.spark.tpcds.metrics;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
+import com.palantir.logsafe.Preconditions;
 import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
 import com.palantir.spark.tpcds.immutables.ImmutablesStyle;
 import com.palantir.spark.tpcds.paths.TpcdsPaths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.spark.sql.Row;
@@ -34,7 +34,7 @@ import scala.collection.JavaConverters;
 public final class TpcdsBenchmarkMetrics {
 
     private final TpcdsBenchmarkConfig config;
-    private final List<Row> metrics = Lists.newArrayList();
+    private final List<Row> metrics = new ArrayList<>();
     private final TpcdsPaths paths;
     private final SparkSession spark;
     private RunningQuery currentRunningQuery;
@@ -56,8 +56,7 @@ public final class TpcdsBenchmarkMetrics {
     }
 
     public void stopBenchmark() {
-        Preconditions.checkArgument(
-                currentRunningQuery != null, "No benchmark is currently running.");
+        Preconditions.checkArgument(currentRunningQuery != null, "No benchmark is currently running.");
         Stopwatch stopped = currentRunningQuery.timer();
         long endTime = System.currentTimeMillis();
         long elapsed = stopped.elapsed(TimeUnit.MILLISECONDS);
@@ -69,7 +68,8 @@ public final class TpcdsBenchmarkMetrics {
                 .executorInstances(config.spark().executorInstances())
                 .executorCores(config.spark().executorCores())
                 .executorMemoryMb(Utils.memoryStringToMb(config.spark().executorMemory()))
-                .sparkConf(JavaConverters.mapAsJavaMapConverter(spark.conf().getAll()).asJava())
+                .sparkConf(JavaConverters.mapAsJavaMapConverter(spark.conf().getAll())
+                        .asJava())
                 .applicationId(spark.sparkContext().applicationId())
                 .experimentStartTimestampMillis(startTime)
                 .experimentEndTimestampMillis(endTime)
@@ -87,7 +87,8 @@ public final class TpcdsBenchmarkMetrics {
     }
 
     public void flushMetrics() {
-        spark.createDataFrame(metrics, TpcdsBenchmarkMetric.SPARK_SCHEMA).write()
+        spark.createDataFrame(metrics, TpcdsBenchmarkMetric.SPARK_SCHEMA)
+                .write()
                 .mode(SaveMode.Append)
                 .format("json")
                 .save(paths.metricsDir());

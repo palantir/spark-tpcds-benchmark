@@ -63,8 +63,6 @@ public enum TpcdsTable {
         return Stream.of(TpcdsTable.values())
                 .filter(table -> table.tableName().equalsIgnoreCase(stringValue))
                 .findFirst()
-                .orElseThrow(
-                        () -> new IllegalArgumentException(
-                                String.format("No table named %s", stringValue)));
+                .orElseThrow(() -> new IllegalArgumentException(String.format("No table named %s", stringValue)));
     }
 }

@@ -17,12 +17,14 @@
 plugins {
     id 'com.palantir.docker' version '0.21.0'
     id 'com.palantir.sls-java-service-distribution'
+    id 'maven-publish'
 }
 
 dependencies {
     compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
     compile 'com.fasterxml.jackson.datatype:jackson-datatype-guava'
     compile 'com.google.guava:guava'
+    compile 'com.palantir.safe-logging:preconditions'
     compile 'org.apache.spark:spark-sql_2.11'
 
     testCompile 'junit:junit'

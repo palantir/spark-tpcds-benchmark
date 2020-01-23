@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.google.common.base.Preconditions;
+import com.palantir.logsafe.Preconditions;
 import com.palantir.spark.tpcds.immutables.ImmutablesConfigStyle;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -32,8 +32,7 @@ import org.immutables.value.Value;
 @ImmutablesConfigStyle
 @JsonDeserialize(as = ImmutableTpcdsBenchmarkConfig.class)
 public interface TpcdsBenchmarkConfig {
-    ObjectMapper MAPPER = new ObjectMapper(new YAMLFactory())
-            .registerModules(new Jdk8Module(), new GuavaModule());
+    ObjectMapper MAPPER = new ObjectMapper(new YAMLFactory()).registerModules(new Jdk8Module(), new GuavaModule());
 
     SparkConfiguration spark();
 
@@ -55,12 +54,10 @@ public interface TpcdsBenchmarkConfig {
 
     @Value.Check
     default void check() {
+        Preconditions.checkArgument(iterations() > 0, "Iterations must be positive.");
+        Preconditions.checkArgument(dataGenerationParallelism() > 0, "Data generation parallelism must be positive.");
         Preconditions.checkArgument(
-                iterations() > 0, "Iterations must be positive.");
-        Preconditions.checkArgument(
-                dataGenerationParallelism() > 0, "Data generation parallelism must be positive.");
-        Preconditions.checkArgument(!dataScalesGb().isEmpty(),
-                "Must specify at least one data scale to run benchmarks against.");
+                !dataScalesGb().isEmpty(), "Must specify at least one data scale to run benchmarks against.");
         dataScalesGb().forEach(scale -> {
             Preconditions.checkArgument(scale > 0, "All data scales must be positive.");
         });

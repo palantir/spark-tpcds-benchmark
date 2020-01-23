@@ -29,67 +29,40 @@ public final class TpcdsPaths {
     }
 
     public String rootTpcdsDataDir(int scale) {
-        return String.join(
-                File.separator,
-                testDataDir,
-                "tpcds_data",
-                String.format("scale=%d", scale));
+        return String.join(File.separator, testDataDir, "tpcds_data", String.format("scale=%d", scale));
     }
 
     public String tableCsvFile(int scale, TpcdsTable table) {
-        return String.join(
-                File.separator,
-                tpcdsCsvDir(scale),
-                String.format("%s.csv", table));
+        return String.join(File.separator, tpcdsCsvDir(scale), String.format("%s.csv", table));
     }
 
     public String tableParquetLocation(int scale, TpcdsTable table) {
-        return String.join(
-                File.separator,
-                tpcdsParquetDir(scale),
-                table.tableName());
+        return String.join(File.separator, tpcdsParquetDir(scale), table.tableName());
     }
 
     public String tpcdsCsvDir(int scale) {
-        return String.join(
-                File.separator,
-                rootTpcdsDataDir(scale),
-                "raw_csv");
+        return String.join(File.separator, rootTpcdsDataDir(scale), "raw_csv");
     }
 
     public String tpcdsParquetDir(int scale) {
-        return String.join(
-                File.separator,
-                rootTpcdsDataDir(scale),
-                "raw_parquet");
+        return String.join(File.separator, rootTpcdsDataDir(scale), "raw_parquet");
     }
 
     public String experimentResultLocation(int scale, String queryName) {
         return String.join(
-                File.separator,
-                rootTpcdsDataDir(scale),
-                "experiments",
-                StringUtils.removeEnd(queryName, ".sql"));
+                File.separator, rootTpcdsDataDir(scale), "experiments", StringUtils.removeEnd(queryName, ".sql"));
     }
 
     public String experimentCorrectnessHashesRoot(int scale) {
-        return String.join(
-                File.separator,
-                rootTpcdsDataDir(scale),
-                "experiments_correctness_hashes");
+        return String.join(File.separator, rootTpcdsDataDir(scale), "experiments_correctness_hashes");
     }
 
     public String experimentCorrectnessHashesLocation(int scale, String queryName) {
         return String.join(
-                File.separator,
-                experimentCorrectnessHashesRoot(scale),
-                StringUtils.removeEnd(queryName, ".sql"));
+                File.separator, experimentCorrectnessHashesRoot(scale), StringUtils.removeEnd(queryName, ".sql"));
     }
 
     public String metricsDir() {
-        return String.join(
-                File.separator,
-                testDataDir,
-                "tpcds_benchmark_results");
+        return String.join(File.separator, testDataDir, "tpcds_benchmark_results");
     }
 }
