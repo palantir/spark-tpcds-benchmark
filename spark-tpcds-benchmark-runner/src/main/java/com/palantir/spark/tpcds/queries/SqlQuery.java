@@ -26,15 +26,13 @@ import org.apache.spark.sql.types.StructType;
 
 public final class SqlQuery implements Query {
     private final String queryName;
-    private final String query;
-    private final String resultLocation;
+    private final String sqlStatement;
     private final Supplier<Dataset<Row>> datasetSupplier;
 
-    public SqlQuery(SparkSession spark, String queryName, String query, String resultLocation) {
+    public SqlQuery(SparkSession spark, String queryName, String sqlStatement) {
         this.queryName = queryName;
-        this.query = query;
-        this.resultLocation = resultLocation;
-        this.datasetSupplier = Suppliers.memoize(() -> sanitizeColumnNames(spark.sql(query)));
+        this.sqlStatement = sqlStatement;
+        this.datasetSupplier = Suppliers.memoize(() -> sanitizeColumnNames(spark.sql(this.sqlStatement)));
     }
 
     @Override
@@ -44,7 +42,7 @@ public final class SqlQuery implements Query {
 
     @Override
     public Optional<String> getSqlStatement() {
-        return Optional.of(query);
+        return Optional.of(sqlStatement);
     }
 
     @Override
@@ -53,7 +51,7 @@ public final class SqlQuery implements Query {
     }
 
     @Override
-    public void save() {
+    public void save(String resultLocation) {
         datasetSupplier.get().write().format("parquet").save(resultLocation);
     }
 

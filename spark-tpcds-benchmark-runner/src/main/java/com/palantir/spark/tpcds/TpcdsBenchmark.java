@@ -17,7 +17,7 @@
 package com.palantir.spark.tpcds;
 
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.CharStreams;
 import com.palantir.logsafe.SafeArg;
@@ -27,12 +27,13 @@ import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
 import com.palantir.spark.tpcds.metrics.TpcdsBenchmarkMetrics;
 import com.palantir.spark.tpcds.paths.TpcdsPaths;
 import com.palantir.spark.tpcds.queries.Query;
+import com.palantir.spark.tpcds.queries.SortBenchmarkQuery;
 import com.palantir.spark.tpcds.queries.SqlQuery;
 import com.palantir.spark.tpcds.registration.TpcdsTableRegistration;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.util.List;
 import java.util.function.Supplier;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -60,7 +61,7 @@ public final class TpcdsBenchmark {
     private final TpcdsBenchmarkMetrics metrics;
     private final SparkSession spark;
     private final FileSystem dataFileSystem;
-    private final Supplier<Map<String, String>> queries = Suppliers.memoize(TpcdsBenchmark::getQueries);
+    private final Supplier<ImmutableList<Query>> sqlQuerySupplier;
 
     public TpcdsBenchmark(
             TpcdsBenchmarkConfig config,
@@ -79,6 +80,7 @@ public final class TpcdsBenchmark {
         this.paths = paths;
         this.spark = spark;
         this.dataFileSystem = dataFileSystem;
+        this.sqlQuerySupplier = Suppliers.memoize(() -> buildSqlQueries(spark));
     }
 
     public void run() throws IOException {
@@ -91,20 +93,24 @@ public final class TpcdsBenchmark {
             config.dataScalesGb().forEach(scale -> {
                 log.info("Beginning benchmarks at a new data scale of {}.", SafeArg.of("dataScale", scale));
                 registration.registerTables(scale);
-                queries.get().forEach((queryName, query) -> {
+                getQueries().forEach(query -> {
                     log.info(
                             "Running query {}: {}",
-                            SafeArg.of("queryName", queryName),
-                            SafeArg.of("queryStatement", query));
+                            SafeArg.of("queryName", query.getName()),
+                            SafeArg.of("queryStatement", query.getSqlStatement().orElse("N/A")));
                     try {
-                        String resultLocation = getResultLocation(scale, queryName);
-                        spark.sparkContext().setJobDescription(String.format("%s-benchmark", queryName));
-                        metrics.startBenchmark(queryName, scale);
-                        boolean success = false;
+                        String resultLocation = paths.experimentResultLocation(scale, query.getName());
+                        Path resultPath = new Path(resultLocation);
+                        if (dataFileSystem.exists(resultPath) && !dataFileSystem.delete(resultPath, true)) {
+                            throw new IllegalStateException(String.format(
+                                    "Failed to clear experiment result destination directory at %s.", resultPath));
+                        }
 
-                        Dataset<Row> queryResultDataset = sanitizeColumnNames(spark.sql(query));
+                        spark.sparkContext().setJobDescription(String.format("%s-benchmark", query.getName()));
+                        metrics.startBenchmark(query.getName(), scale);
+                        boolean success = false;
                         try {
-                            queryResultDataset.write().format("parquet").save(resultLocation);
+                            query.save(resultLocation);
                             success = true;
                         } finally {
                             if (success) {
@@ -115,15 +121,25 @@ public final class TpcdsBenchmark {
                         }
 
                         log.info(
-                                "Successfully ran query {} at scale {}. Will now proceed to verify the correctness.",
-                                SafeArg.of("queryName", queryName),
+                                "Successfully ran query {} at scale {}.",
+                                SafeArg.of("queryName", query.getName()),
                                 SafeArg.of("scale", scale));
-                        correctness.verifyCorrectness(
-                                scale, queryName, query, queryResultDataset.schema(), resultLocation);
-                        log.info(
-                                "Successfully verified correctness of query {} at scale {}.",
-                                SafeArg.of("queryName", queryName),
-                                SafeArg.of("scale", scale));
+                        if (query.getSqlStatement().isPresent()) {
+                            log.info(
+                                    "Verifying correctness of query {} at scale {}.",
+                                    SafeArg.of("queryName", query.getName()),
+                                    SafeArg.of("scale", scale));
+                            correctness.verifyCorrectness(
+                                    scale,
+                                    query.getName(),
+                                    query.getSqlStatement().get(),
+                                    query.getSchema(),
+                                    resultLocation);
+                            log.info(
+                                    "Successfully verified correctness of query {} at scale {}.",
+                                    SafeArg.of("queryName", query.getName()),
+                                    SafeArg.of("scale", scale));
+                        }
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -132,7 +148,7 @@ public final class TpcdsBenchmark {
             });
             metrics.flushMetrics();
             log.info(
-                    "Successfully finished one iteration of benchmarks at all scales.",
+                    "Successfully finished an iteration of benchmarks at all scales. Completed {} iterations in total.",
                     SafeArg.of("completedIterations", iteration));
         }
         log.info("Successfully ran all benchmarks for the requested number of iterations");
@@ -148,8 +164,18 @@ public final class TpcdsBenchmark {
         log.info("Finished benchmark; exiting");
     }
 
-    private static Map<String, String> getQueries() {
-        ImmutableMap.Builder<String, String> queries = ImmutableMap.builder();
+    private List<Query> getQueries() {
+        if (config.includeSortBenchmark()) {
+            return ImmutableList.<Query>builder()
+                    .addAll(sqlQuerySupplier.get())
+                    .add(new SortBenchmarkQuery(spark))
+                    .build();
+        }
+        return sqlQuerySupplier.get();
+    }
+
+    private static ImmutableList<Query> buildSqlQueries(SparkSession spark) {
+        ImmutableList.Builder<Query> queries = ImmutableList.builder();
         try (TarArchiveInputStream tarArchiveInputStream = new TarArchiveInputStream(
                 TpcdsBenchmark.class.getClassLoader().getResourceAsStream("queries.tar"));
                 InputStreamReader tarArchiveReader =
@@ -158,41 +184,12 @@ public final class TpcdsBenchmark {
             while ((entry = tarArchiveInputStream.getNextTarEntry()) != null) {
                 String queryString = CharStreams.toString(tarArchiveReader);
                 if (!BLACKLISTED_QUERIES.contains(entry.getName())) {
-                    queries.put(entry.getName(), queryString);
+                    queries.add(new SqlQuery(spark, entry.getName(), queryString));
                 }
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         return queries.build();
-    }
-
-    private String getResultLocation(int scale, String queryName) throws IOException {
-        String resultLocation = paths.experimentResultLocation(scale, queryName);
-        Path resultPath = new Path(resultLocation);
-        if (dataFileSystem.exists(resultPath) && !dataFileSystem.delete(resultPath, true)) {
-            throw new IllegalStateException(String.format(
-                    "Failed to clear experiment result destination directory at %s.", resultPath));
-        }
-        return resultLocation;
-    }
-
-    private Query buildSqlQuery(String queryName, String query, String resultLocation) {
-        return new SqlQuery(spark, queryName, query, resultLocation);
-    }
-
-    private Dataset<Row> sanitizeColumnNames(Dataset<Row> sqlOutput) {
-        Dataset<Row> sanitizedSqlOutput = sqlOutput;
-        for (String columnName : sqlOutput.columns()) {
-            String sanitized = sanitize(columnName);
-            if (!sanitized.equals(columnName)) {
-                sanitizedSqlOutput = sanitizedSqlOutput.withColumnRenamed(columnName, sanitized);
-            }
-        }
-        return sanitizedSqlOutput;
-    }
-
-    private static String sanitize(String name) {
-        return name.replaceAll("[ ,;{}()]", "X");
     }
 }

@@ -26,9 +26,5 @@ public interface Query {
 
     StructType getSchema();
 
-    void save();
-
-    default boolean hasCorrectnessCheck() {
-        return true;
-    }
+    void save(String resultLocation);
 }
