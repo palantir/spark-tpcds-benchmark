@@ -26,6 +26,8 @@ import com.palantir.spark.tpcds.correctness.TpcdsQueryCorrectnessChecks;
 import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
 import com.palantir.spark.tpcds.metrics.TpcdsBenchmarkMetrics;
 import com.palantir.spark.tpcds.paths.TpcdsPaths;
+import com.palantir.spark.tpcds.queries.Query;
+import com.palantir.spark.tpcds.queries.SqlQuery;
 import com.palantir.spark.tpcds.registration.TpcdsTableRegistration;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -83,26 +85,24 @@ public final class TpcdsBenchmark {
         dataGenerator.generateDataIfNecessary();
         for (int iteration = 0; iteration < config.iterations(); iteration++) {
             log.info(
-                    "Beginning benchmark iteration.",
+                    "Beginning benchmark iteration {} of {}.",
                     SafeArg.of("currentIteration", iteration),
                     SafeArg.of("totalNumIterations", config.iterations()));
             config.dataScalesGb().forEach(scale -> {
-                log.info("Beginning benchmarks at a new data scale.", SafeArg.of("dataScale", scale));
+                log.info("Beginning benchmarks at a new data scale of {}.", SafeArg.of("dataScale", scale));
                 registration.registerTables(scale);
                 queries.get().forEach((queryName, query) -> {
-                    log.info("Running query {}: {}", SafeArg.of("queryName", queryName), SafeArg.of("queryStatement",
-                            query));
+                    log.info(
+                            "Running query {}: {}",
+                            SafeArg.of("queryName", queryName),
+                            SafeArg.of("queryStatement", query));
                     try {
-                        String resultLocation = paths.experimentResultLocation(scale, queryName);
-                        Path resultPath = new Path(resultLocation);
-                        if (dataFileSystem.exists(resultPath) && !dataFileSystem.delete(resultPath, true)) {
-                            throw new IllegalStateException(String.format(
-                                    "Failed to clear experiment result destination directory at %s.", resultPath));
-                        }
-                        Dataset<Row> queryResultDataset = sanitizeColumnNames(spark.sql(query));
+                        String resultLocation = getResultLocation(scale, queryName);
                         spark.sparkContext().setJobDescription(String.format("%s-benchmark", queryName));
                         metrics.startBenchmark(queryName, scale);
                         boolean success = false;
+
+                        Dataset<Row> queryResultDataset = sanitizeColumnNames(spark.sql(query));
                         try {
                             queryResultDataset.write().format("parquet").save(resultLocation);
                             success = true;
@@ -113,6 +113,7 @@ public final class TpcdsBenchmark {
                                 metrics.abortBenchmark();
                             }
                         }
+
                         log.info(
                                 "Successfully ran query {} at scale {}. Will now proceed to verify the correctness.",
                                 SafeArg.of("queryName", queryName),
@@ -137,7 +138,8 @@ public final class TpcdsBenchmark {
         log.info("Successfully ran all benchmarks for the requested number of iterations");
 
         Dataset<Row> resultMetrics = spark.read().json(paths.metricsDir()).drop("sparkConf");
-        log.info("Printing summary metrics (limit 1000):\n{}",
+        log.info(
+                "Printing summary metrics (limit 1000):\n{}",
                 SafeArg.of(
                         "metrics",
                         resultMetrics.groupBy("queryName", "scale").agg(
@@ -163,6 +165,20 @@ public final class TpcdsBenchmark {
             throw new RuntimeException(e);
         }
         return queries.build();
+    }
+
+    private String getResultLocation(int scale, String queryName) throws IOException {
+        String resultLocation = paths.experimentResultLocation(scale, queryName);
+        Path resultPath = new Path(resultLocation);
+        if (dataFileSystem.exists(resultPath) && !dataFileSystem.delete(resultPath, true)) {
+            throw new IllegalStateException(String.format(
+                    "Failed to clear experiment result destination directory at %s.", resultPath));
+        }
+        return resultLocation;
+    }
+
+    private Query buildSqlQuery(String queryName, String query, String resultLocation) {
+        return new SqlQuery(spark, queryName, query, resultLocation);
     }
 
     private Dataset<Row> sanitizeColumnNames(Dataset<Row> sqlOutput) {
