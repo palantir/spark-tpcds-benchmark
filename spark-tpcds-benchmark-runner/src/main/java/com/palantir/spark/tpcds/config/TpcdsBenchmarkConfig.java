@@ -54,7 +54,7 @@ public interface TpcdsBenchmarkConfig {
 
     @Value.Check
     default void check() {
-        Preconditions.checkArgument(iterations() > 0, "Iterations must be positive.");
+        Preconditions.checkArgument(iterations() >= 0, "Iterations must be non-negative.");
         Preconditions.checkArgument(dataGenerationParallelism() > 0, "Data generation parallelism must be positive.");
         Preconditions.checkArgument(
                 !dataScalesGb().isEmpty(), "Must specify at least one data scale to run benchmarks against.");
