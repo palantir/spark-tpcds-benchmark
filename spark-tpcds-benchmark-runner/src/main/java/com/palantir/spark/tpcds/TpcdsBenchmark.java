@@ -165,10 +165,14 @@ public final class TpcdsBenchmark {
     }
 
     private List<Query> getQueries() {
+        ImmutableList.Builder<Query> queries = ImmutableList.builder();
         if (config.includeSortBenchmark()) {
-            return ImmutableList.of(new SortBenchmarkQuery(spark));
+            queries.add(new SortBenchmarkQuery(spark));
         }
-        return sqlQuerySupplier.get();
+        if (!config.excludeSqlQueries()) {
+            queries.addAll(sqlQuerySupplier.get());
+        }
+        return queries.build();
     }
 
     private static ImmutableList<Query> buildSqlQueries(SparkSession spark) {

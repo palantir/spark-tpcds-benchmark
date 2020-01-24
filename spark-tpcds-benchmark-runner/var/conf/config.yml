@@ -21,3 +21,4 @@ spark:
 testDataDir: file:///tmp/hdfs/data/tpcds/test_data
 iterations: 1
 includeSortBenchmark: false
+excludeSqlQueries: false

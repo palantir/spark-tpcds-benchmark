@@ -66,6 +66,11 @@ public interface TpcdsBenchmarkConfig {
         return false;
     }
 
+    @Value.Default
+    default boolean excludeSqlQueries() {
+        return false;
+    }
+
     @Value.Check
     default void check() {
         Preconditions.checkArgument(iterations() >= 0, "Iterations must be non-negative.");
