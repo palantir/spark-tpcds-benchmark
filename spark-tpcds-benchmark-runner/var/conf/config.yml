@@ -4,14 +4,16 @@ dataScalesGb:
 dsdgenWorkLocalDir: /tmp/tpcds_work_dir
 generateData: true
 hadoop:
+  hadoopConfDirs: []
   hadoopConf:
     #fs.defaultFS: hdfs://localhost:8020
     fs.defaultFS: file:///tmp/hdfs
 overwriteData: false
 spark:
-  executorCores: 1
-  executorInstances: 1
-  executorMemory: 1g
+  #executorCores: 1
+  #executorInstances: 8
+  #executorMemory: 1g
+  #master: yarn
   master: local[4]
   sparkConf:
     spark.yarn.jars: service/lib/*
