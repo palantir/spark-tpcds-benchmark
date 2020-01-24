@@ -90,7 +90,8 @@ public final class TpcdsBenchmark {
                 log.info("Beginning benchmarks at a new data scale.", SafeArg.of("dataScale", scale));
                 registration.registerTables(scale);
                 queries.get().forEach((queryName, query) -> {
-                    log.info("Running query.", SafeArg.of("queryName", queryName), SafeArg.of("queryStatement", query));
+                    log.info("Running query {}: {}", SafeArg.of("queryName", queryName), SafeArg.of("queryStatement",
+                            query));
                     try {
                         String resultLocation = paths.experimentResultLocation(scale, queryName);
                         Path resultPath = new Path(resultLocation);
@@ -113,20 +114,20 @@ public final class TpcdsBenchmark {
                             }
                         }
                         log.info(
-                                "Successfully ran query. Will now proceed to verify the correctness.",
+                                "Successfully ran query {} at scale {}. Will now proceed to verify the correctness.",
                                 SafeArg.of("queryName", queryName),
                                 SafeArg.of("scale", scale));
                         correctness.verifyCorrectness(
                                 scale, queryName, query, queryResultDataset.schema(), resultLocation);
                         log.info(
-                                "Successfully verified correctness of a query.",
+                                "Successfully verified correctness of query {} at scale {}.",
                                 SafeArg.of("queryName", queryName),
                                 SafeArg.of("scale", scale));
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
                 });
-                log.info("Successfully ran benchmarks at a given scale.", SafeArg.of("scale", scale));
+                log.info("Successfully ran benchmarks at scale of {} GB.", SafeArg.of("scale", scale));
             });
             metrics.flushMetrics();
             log.info(
