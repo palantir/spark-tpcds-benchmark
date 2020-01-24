@@ -167,8 +167,8 @@ public final class TpcdsBenchmark {
     private List<Query> getQueries() {
         if (config.includeSortBenchmark()) {
             return ImmutableList.<Query>builder()
-                    .addAll(sqlQuerySupplier.get())
                     .add(new SortBenchmarkQuery(spark))
+                    .addAll(sqlQuerySupplier.get())
                     .build();
         }
         return sqlQuerySupplier.get();
