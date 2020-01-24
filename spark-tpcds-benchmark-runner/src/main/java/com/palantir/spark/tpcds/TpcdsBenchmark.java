@@ -133,8 +133,8 @@ public final class TpcdsBenchmark {
                     SafeArg.of("completedIterations", iteration));
         }
         log.info("Successfully ran all benchmarks for the requested number of iterations");
-        log.info("Printing metrics from all iterations",
-                SafeArg.of("metrics", spark.read().json(paths.metricsDir()).collectAsList()));
+        log.info("Printing metrics from all iterations: {}",
+                SafeArg.of("metrics", spark.read().json(paths.metricsDir()).drop("sparkConf").collectAsList()));
         log.info("Finished benchmark; exiting");
     }
 
