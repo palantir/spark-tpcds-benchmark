@@ -16,6 +16,7 @@
 
 package com.palantir.spark.tpcds.datagen;
 
+import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -33,6 +34,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
@@ -128,7 +130,7 @@ public final class TpcdsDataGenerator {
                     }
                 } else {
                     log.info(
-                            "Not overwriting data for the given scale.",
+                            "Not overwriting data at path {} for the given scale of {}.",
                             SafeArg.of("dataPath", rootDataPath),
                             SafeArg.of("dataScale", scale));
                     return;
@@ -158,9 +160,9 @@ public final class TpcdsDataGenerator {
                 if (returnCode != 0) {
                     throw new IllegalStateException(String.format("Dsdgen failed with return code %d", returnCode));
                 }
-                log.info("Finished running dsdgen for the following data scale.", SafeArg.of("scale", scale));
+                log.info("Finished running dsdgen for data scale {}.", SafeArg.of("scale", scale));
                 log.info(
-                        "Uploading tpcds data from the following location.",
+                        "Uploading tpcds data from location {}.",
                         SafeArg.of("localLocation", tpcdsTempDir.getAbsolutePath()));
                 uploadCsvs(rootDataPath, tpcdsTempDir);
                 saveTablesAsParquet(scale);
@@ -169,7 +171,7 @@ public final class TpcdsDataGenerator {
             }
         });
         uploadDataForScaleTask.addListener(
-                () -> log.info("Finished uploading data for data at the following scale.", SafeArg.of("scale", scale)),
+                () -> log.info("Finished uploading data for data at scale {}.", SafeArg.of("scale", scale)),
                 dataGeneratorThreadPool);
         return uploadDataForScaleTask;
     }
@@ -201,7 +203,7 @@ public final class TpcdsDataGenerator {
                     saveAsParquetTask.addListener(
                             () -> {
                                 log.info(
-                                        "Saved a table as parquet at the following scale.",
+                                        "Saved a table {} as parquet at scale {}.",
                                         SafeArg.of("table", table),
                                         SafeArg.of("scale", scale));
                             },
@@ -213,7 +215,7 @@ public final class TpcdsDataGenerator {
     }
 
     private void uploadCsvs(org.apache.hadoop.fs.Path rootDataPath, File tpcdsTempDir) {
-        Stream.of(tpcdsTempDir.listFiles())
+        Streams.stream(Optional.ofNullable(tpcdsTempDir.listFiles()))
                 .map(file -> {
                     ListenableFuture<?> uploadCsvTask = dataGeneratorThreadPool.submit(() -> {
                         try {

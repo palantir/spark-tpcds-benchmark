@@ -44,13 +44,27 @@ public interface TpcdsBenchmarkConfig {
 
     boolean generateData();
 
-    boolean overwriteData();
+    @Value.Default
+    default boolean overwriteData() {
+        return false;
+    }
 
     List<Integer> dataScalesGb();
 
-    int dataGenerationParallelism();
+    @Value.Default
+    default int dataGenerationParallelism() {
+        return 5;
+    }
 
-    int iterations();
+    @Value.Default
+    default int iterations() {
+        return 1;
+    }
+
+    @Value.Default
+    default boolean includeSortBenchmark() {
+        return false;
+    }
 
     @Value.Check
     default void check() {
