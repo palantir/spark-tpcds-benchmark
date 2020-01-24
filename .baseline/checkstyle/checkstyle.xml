@@ -201,10 +201,6 @@
             <property name="separated" value="true"/>
             <property name="sortStaticImportsAlphabetically" value="true"/>
         </module>
-        <module name="Indentation"> <!-- Java Style Guide: Block indentation: +4 spaces -->
-            <property name="arrayInitIndent" value="8"/>
-            <property name="lineWrappingIndentation" value="8"/>
-        </module>
         <module name="InnerAssignment"/> <!-- Java Coding Guidelines: Inner assignments: Not used -->
         <module name="LeftCurly"/> <!-- Java Style Guide: Nonempty blocks: K & R style -->
         <module name="LineLength"> <!-- Java Style Guide: No line-wrapping -->
@@ -410,7 +406,6 @@
             <message key="name.invalidPattern" value="Type name ''{0}'' must match pattern ''{1}''."/>
         </module>
         <module name="TypecastParenPad"/> <!-- Java Style Guide: Horizontal whitespace -->
-        <module name="UnnecessaryParentheses"/>
         <module name="UnusedImports"> <!-- Java Style Guide: No unused imports -->
             <property name="processJavadoc" value="true"/>
         </module>
