@@ -16,7 +16,6 @@
 
 package com.palantir.spark.tpcds.datagen;
 
-import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -215,7 +214,9 @@ public final class TpcdsDataGenerator {
     }
 
     private void uploadCsvs(org.apache.hadoop.fs.Path rootDataPath, File tpcdsTempDir) {
-        Streams.stream(Optional.ofNullable(tpcdsTempDir.listFiles()))
+        Optional.ofNullable(tpcdsTempDir.listFiles())
+                .map(Stream::of)
+                .orElse(Stream.empty())
                 .map(file -> {
                     ListenableFuture<?> uploadCsvTask = dataGeneratorThreadPool.submit(() -> {
                         try {
