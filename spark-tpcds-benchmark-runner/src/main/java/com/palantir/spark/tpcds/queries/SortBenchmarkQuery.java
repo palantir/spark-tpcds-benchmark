@@ -34,12 +34,10 @@ import org.apache.spark.sql.types.StructType;
 
 public final class SortBenchmarkQuery implements Query {
     private final SparkSession spark;
-    private final String resultLocation;
     private final Supplier<Dataset<Row>> datasetSupplier;
 
-    public SortBenchmarkQuery(SparkSession spark, String resultLocation) {
+    public SortBenchmarkQuery(SparkSession spark) {
         this.spark = spark;
-        this.resultLocation = resultLocation;
         this.datasetSupplier = Suppliers.memoize(this::buildDataset);
     }
 
@@ -53,17 +51,12 @@ public final class SortBenchmarkQuery implements Query {
     }
 
     @Override
-    public boolean hasCorrectnessCheck() {
-        return false;
-    }
-
-    @Override
     public StructType getSchema() {
         return null;
     }
 
     @Override
-    public void save() {
+    public void save(String resultLocation) {
         this.datasetSupplier.get()
                 .write()
                 .bucketBy(2500, "datahashbucket")
