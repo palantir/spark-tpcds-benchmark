@@ -216,7 +216,7 @@ public final class TpcdsDataGenerator {
     private void uploadCsvs(org.apache.hadoop.fs.Path rootDataPath, File tpcdsTempDir) {
         Optional.ofNullable(tpcdsTempDir.listFiles())
                 .map(Stream::of)
-                .orElse(Stream.empty())
+                .orElseGet(Stream::empty)
                 .map(file -> {
                     ListenableFuture<?> uploadCsvTask = dataGeneratorThreadPool.submit(() -> {
                         try {

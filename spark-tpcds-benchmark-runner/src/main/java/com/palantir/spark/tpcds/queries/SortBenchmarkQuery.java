@@ -17,6 +17,7 @@
 package com.palantir.spark.tpcds.queries;
 
 import com.google.common.base.Suppliers;
+import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.spark.tpcds.constants.TpcdsTable;
 import java.util.Iterator;
 import java.util.Optional;
@@ -41,6 +42,7 @@ public final class SortBenchmarkQuery implements Query {
         this.datasetSupplier = Suppliers.memoize(this::buildDataset);
     }
 
+    @Override
     public String getName() {
         return "SparkSqlSortBenchmark";
     }
@@ -95,9 +97,10 @@ public final class SortBenchmarkQuery implements Query {
             this.failurePartitionId = failurePartitionId;
         }
 
+        @Override
         public Iterator<T> call(Iterator<T> input) {
             if (TaskContext.get().stageAttemptNumber() == 0 && TaskContext.get().partitionId() == failurePartitionId) {
-                throw new RuntimeException("intentional failure");
+                throw new SafeRuntimeException("intentional failure");
             }
             return input;
         }
