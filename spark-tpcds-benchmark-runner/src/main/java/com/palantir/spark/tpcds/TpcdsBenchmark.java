@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,15 +134,21 @@ public final class TpcdsBenchmark {
                     SafeArg.of("completedIterations", iteration));
         }
         log.info("Successfully ran all benchmarks for the requested number of iterations");
-        log.info("Printing metrics from all iterations: {}",
-                SafeArg.of("metrics", spark.read().json(paths.metricsDir()).drop("sparkConf").collectAsList()));
+
+        Dataset<Row> resultMetrics = spark.read().json(paths.metricsDir()).drop("sparkConf");
+        log.info("Printing summary metrics (limit 1000):\n{}",
+                SafeArg.of(
+                        "metrics",
+                        resultMetrics.groupBy("queryName", "scale").agg(
+                                functions.avg("durationMillis"),
+                                functions.max("durationMillis")).showString(1000, 20, false)));
         log.info("Finished benchmark; exiting");
     }
 
     private static Map<String, String> getQueries() {
         ImmutableMap.Builder<String, String> queries = ImmutableMap.builder();
         try (TarArchiveInputStream tarArchiveInputStream = new TarArchiveInputStream(
-                        TpcdsBenchmark.class.getClassLoader().getResourceAsStream("queries.tar"));
+                TpcdsBenchmark.class.getClassLoader().getResourceAsStream("queries.tar"));
                 InputStreamReader tarArchiveReader =
                         new InputStreamReader(tarArchiveInputStream, StandardCharsets.UTF_8)) {
             TarArchiveEntry entry;
