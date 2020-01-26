@@ -27,7 +27,6 @@ import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
@@ -68,17 +67,18 @@ public final class SortBenchmarkQuery implements Query {
     }
 
     private Dataset<Row> buildDataset() {
-        Dataset<Row> input = spark.table(TpcdsTable.STORE_SALES.tableName());
-        ExpressionEncoder<Row> encoder = RowEncoder.apply(input.schema());
-        return input
-                .withColumn("col1", functions.hash(functions.column("ss_customer_sk")))
-                .sort("col1")
-                .mapPartitions(new ForceFailureFunction<>(0), encoder)
+        //ExpressionEncoder<Row> encoder = RowEncoder.apply(input.schema());
+        Dataset<Row> withHashCol1 = spark.table(TpcdsTable.STORE_SALES.tableName())
+                .withColumn("col1", functions.hash(functions.col("ss_customer_sk")))
+                .sort("col1");
+        Dataset<Row> withHashCol2 = withHashCol1
+                .mapPartitions(new ForceFailureFunction<>(0), RowEncoder.apply(withHashCol1.schema()))
                 .repartition(400)
                 .repartition(1400)
                 .withColumn("col2", functions.pmod(functions.col("col1"), functions.lit(100)))
-                .sort("col2")
-                .mapPartitions(new ForceFailureFunction<>(1), encoder)
+                .sort("col2");
+        return withHashCol2
+                .mapPartitions(new ForceFailureFunction<>(1), RowEncoder.apply(withHashCol2.schema()))
                 .repartition(1500)
                 .withColumn("col3", functions.pmod(functions.col("col1"), functions.factorial(functions.col("col2"))))
                 .sort("col3")
@@ -86,7 +86,7 @@ public final class SortBenchmarkQuery implements Query {
                 .withColumn("hashbucket", functions.pmod(functions.column("col1hash"), functions.lit(2500)))
                 .withColumn("col2long", functions.column("col2").cast(DataTypes.LongType))
                 .groupBy("hashbucket")
-                .agg(functions.sum("part2long").as("part2sum"))
+                .agg(functions.sum("col2long").as("col2sum"))
                 .sort("hashbucket");
     }
 
