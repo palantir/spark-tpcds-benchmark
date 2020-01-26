@@ -60,10 +60,10 @@ public final class SortBenchmarkQuery implements Query {
     public void save(String resultLocation) {
         this.datasetSupplier.get()
                 .write()
-                .bucketBy(2500, "datahashbucket")
-                .sortBy("datahashbucket")
+                //.bucketBy(2500, "datahashbucket")
+                //.sortBy("datahashbucket")
                 .format("parquet")
-                .save(resultLocation);
+                .saveAsTable(resultLocation);
     }
 
     private Dataset<Row> buildDataset() {
