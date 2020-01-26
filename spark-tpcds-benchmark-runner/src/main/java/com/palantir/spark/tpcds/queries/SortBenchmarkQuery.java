@@ -63,7 +63,7 @@ public final class SortBenchmarkQuery implements Query {
                 //.bucketBy(2500, "datahashbucket")
                 //.sortBy("datahashbucket")
                 .format("parquet")
-                .saveAsTable(resultLocation);
+                .save(resultLocation);
     }
 
     private Dataset<Row> buildDataset() {
