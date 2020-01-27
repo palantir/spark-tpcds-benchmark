@@ -20,5 +20,5 @@ spark:
 #testDataDir: hdfs://localhost:8020/data/tpcds/test_data
 testDataDir: file:///tmp/hdfs/data/tpcds/test_data
 iterations: 1
-includeSortBenchmark: false
-excludeSqlQueries: false
+#includeSortBenchmark: true
+#excludeSqlQueries: false

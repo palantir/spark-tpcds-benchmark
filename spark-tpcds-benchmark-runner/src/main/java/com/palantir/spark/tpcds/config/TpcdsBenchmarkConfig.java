@@ -63,7 +63,7 @@ public interface TpcdsBenchmarkConfig {
 
     @Value.Default
     default boolean includeSortBenchmark() {
-        return false;
+        return true;
     }
 
     @Value.Default
