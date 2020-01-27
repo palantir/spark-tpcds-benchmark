@@ -158,9 +158,10 @@ public final class TpcdsBenchmark {
                 "Printing summary metrics (limit 1000):\n{}",
                 SafeArg.of(
                         "metrics",
-                        resultMetrics.groupBy("queryName", "scale").agg(
-                                functions.avg("durationMillis"),
-                                functions.max("durationMillis")).showString(1000, 20, false)));
+                        resultMetrics
+                                .groupBy("queryName", "scale")
+                                .agg(functions.avg("durationMillis"), functions.max("durationMillis"))
+                                .showString(1000, 20, false)));
         log.info("Finished benchmark; exiting");
     }
 
@@ -178,7 +179,7 @@ public final class TpcdsBenchmark {
     private static ImmutableList<Query> buildSqlQueries(SparkSession spark) {
         ImmutableList.Builder<Query> queries = ImmutableList.builder();
         try (TarArchiveInputStream tarArchiveInputStream = new TarArchiveInputStream(
-                TpcdsBenchmark.class.getClassLoader().getResourceAsStream("queries.tar"));
+                        TpcdsBenchmark.class.getClassLoader().getResourceAsStream("queries.tar"));
                 InputStreamReader tarArchiveReader =
                         new InputStreamReader(tarArchiveInputStream, StandardCharsets.UTF_8)) {
             TarArchiveEntry entry;

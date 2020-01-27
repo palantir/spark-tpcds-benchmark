@@ -56,16 +56,17 @@ public final class SortBenchmarkQuery implements Query {
 
     @Override
     public void save(String resultLocation) {
-        this.datasetSupplier.get()
+        this.datasetSupplier
+                .get()
                 .write()
-                //.bucketBy(2500, "hashbucket")
-                //.sortBy("hashbucket")
+                // .bucketBy(2500, "hashbucket")
+                // .sortBy("hashbucket")
                 .format("parquet")
                 .save(resultLocation);
     }
 
     private Dataset<Row> buildDataset() {
-        //ExpressionEncoder<Row> encoder = RowEncoder.apply(input.schema());
+        // ExpressionEncoder<Row> encoder = RowEncoder.apply(input.schema());
         Dataset<Row> withHashCol1 = spark.table(TpcdsTable.STORE_SALES.tableName())
                 .withColumn("col1", functions.hash(functions.col("ss_customer_sk")))
                 .sort("col1");
@@ -90,8 +91,7 @@ public final class SortBenchmarkQuery implements Query {
     }
 
     static final class NoOpMapPartitionsFunction<T> implements MapPartitionsFunction<T, T> {
-        NoOpMapPartitionsFunction() {
-        }
+        NoOpMapPartitionsFunction() {}
 
         @Override
         public Iterator<T> call(Iterator<T> input) {
