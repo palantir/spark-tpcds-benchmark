@@ -44,17 +44,36 @@ public interface TpcdsBenchmarkConfig {
 
     boolean generateData();
 
-    boolean overwriteData();
+    @Value.Default
+    default boolean overwriteData() {
+        return false;
+    }
 
     List<Integer> dataScalesGb();
 
-    int dataGenerationParallelism();
+    @Value.Default
+    default int dataGenerationParallelism() {
+        return 5;
+    }
 
-    int iterations();
+    @Value.Default
+    default int iterations() {
+        return 1;
+    }
+
+    @Value.Default
+    default boolean includeSortBenchmark() {
+        return true;
+    }
+
+    @Value.Default
+    default boolean excludeSqlQueries() {
+        return false;
+    }
 
     @Value.Check
     default void check() {
-        Preconditions.checkArgument(iterations() > 0, "Iterations must be positive.");
+        Preconditions.checkArgument(iterations() >= 0, "Iterations must be non-negative.");
         Preconditions.checkArgument(dataGenerationParallelism() > 0, "Data generation parallelism must be positive.");
         Preconditions.checkArgument(
                 !dataScalesGb().isEmpty(), "Must specify at least one data scale to run benchmarks against.");

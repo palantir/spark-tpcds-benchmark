@@ -1,0 +1,6 @@
+type: improvement
+improvement:
+  description: Add a custom benchmark that explicitly forces a high volume of data
+    shuffling (and is not part of standard TPC-DS).
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/68

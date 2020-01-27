@@ -25,13 +25,25 @@ import org.immutables.value.Value;
 @ImmutablesConfigStyle
 @JsonDeserialize(as = ImmutableSparkConfiguration.class)
 public interface SparkConfiguration {
-    String master();
+    @Value.Default
+    default String master() {
+        return "yarn";
+    }
 
-    int executorInstances();
+    @Value.Default
+    default int executorInstances() {
+        return 8;
+    }
 
-    int executorCores();
+    @Value.Default
+    default int executorCores() {
+        return 1;
+    }
 
-    String executorMemory();
+    @Value.Default
+    default String executorMemory() {
+        return "1g";
+    }
 
     Map<String, String> sparkConf();
 }
