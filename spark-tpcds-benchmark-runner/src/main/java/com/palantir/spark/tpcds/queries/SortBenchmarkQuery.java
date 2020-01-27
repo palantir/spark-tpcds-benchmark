@@ -41,7 +41,7 @@ public final class SortBenchmarkQuery implements Query {
 
     @Override
     public String getName() {
-        return "SparkSqlSortBenchmark";
+        return "pal-sort-benchmark";
     }
 
     @Override
@@ -73,12 +73,12 @@ public final class SortBenchmarkQuery implements Query {
                 .mapPartitions(new NoOpMapPartitionsFunction<>(), RowEncoder.apply(withHashCol1.schema()))
                 .repartition(400)
                 .mapPartitions(new NoOpMapPartitionsFunction<>(), RowEncoder.apply(withHashCol1.schema()))
-                .repartition(1400)
+                .repartition(700)
                 .withColumn("col2", functions.pmod(functions.col("col1"), functions.lit(100)))
                 .sort("col2");
         return withHashCol2
                 .mapPartitions(new NoOpMapPartitionsFunction<>(), RowEncoder.apply(withHashCol2.schema()))
-                .repartition(1500)
+                .repartition(500)
                 .withColumn("col3", functions.pmod(functions.col("col1"), functions.factorial(functions.col("col2"))))
                 .sort("col3")
                 .withColumn("col1hash", functions.hash(functions.column("col1")))
