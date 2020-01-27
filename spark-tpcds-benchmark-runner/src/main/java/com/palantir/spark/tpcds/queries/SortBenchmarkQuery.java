@@ -17,12 +17,10 @@
 package com.palantir.spark.tpcds.queries;
 
 import com.google.common.base.Suppliers;
-import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.spark.tpcds.constants.TpcdsTable;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.function.Supplier;
-import org.apache.spark.TaskContext;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -60,8 +58,8 @@ public final class SortBenchmarkQuery implements Query {
     public void save(String resultLocation) {
         this.datasetSupplier.get()
                 .write()
-                //.bucketBy(2500, "datahashbucket")
-                //.sortBy("datahashbucket")
+                //.bucketBy(2500, "hashbucket")
+                //.sortBy("hashbucket")
                 .format("parquet")
                 .save(resultLocation);
     }
@@ -72,13 +70,14 @@ public final class SortBenchmarkQuery implements Query {
                 .withColumn("col1", functions.hash(functions.col("ss_customer_sk")))
                 .sort("col1");
         Dataset<Row> withHashCol2 = withHashCol1
-                .mapPartitions(new ForceFailureFunction<>(0), RowEncoder.apply(withHashCol1.schema()))
+                .mapPartitions(new NoOpMapPartitionsFunction<>(), RowEncoder.apply(withHashCol1.schema()))
                 .repartition(400)
+                .mapPartitions(new NoOpMapPartitionsFunction<>(), RowEncoder.apply(withHashCol1.schema()))
                 .repartition(1400)
                 .withColumn("col2", functions.pmod(functions.col("col1"), functions.lit(100)))
                 .sort("col2");
         return withHashCol2
-                .mapPartitions(new ForceFailureFunction<>(1), RowEncoder.apply(withHashCol2.schema()))
+                .mapPartitions(new NoOpMapPartitionsFunction<>(), RowEncoder.apply(withHashCol2.schema()))
                 .repartition(1500)
                 .withColumn("col3", functions.pmod(functions.col("col1"), functions.factorial(functions.col("col2"))))
                 .sort("col3")
@@ -90,18 +89,12 @@ public final class SortBenchmarkQuery implements Query {
                 .sort("hashbucket");
     }
 
-    static final class ForceFailureFunction<T> implements MapPartitionsFunction<T, T> {
-        private final int failurePartitionId;
-
-        ForceFailureFunction(int failurePartitionId) {
-            this.failurePartitionId = failurePartitionId;
+    static final class NoOpMapPartitionsFunction<T> implements MapPartitionsFunction<T, T> {
+        NoOpMapPartitionsFunction() {
         }
 
         @Override
         public Iterator<T> call(Iterator<T> input) {
-            if (TaskContext.get().stageAttemptNumber() == 0 && TaskContext.get().partitionId() == failurePartitionId) {
-                throw new SafeRuntimeException("intentional failure");
-            }
             return input;
         }
     }
