@@ -234,8 +234,9 @@ public final class TpcdsDataGenerator {
                             () -> log.info(
                                     "Finished uploading CSV to the Hadoop File System.",
                                     SafeArg.of("localFilePath", file),
-                                    SafeArg.of("destination", new org.apache.hadoop.fs.Path(
-                                            rootDataPath, file.getName()))),
+                                    SafeArg.of(
+                                            "destination",
+                                            new org.apache.hadoop.fs.Path(rootDataPath, file.getName()))),
                             dataGeneratorThreadPool);
                     return uploadCsvTask;
                 })
