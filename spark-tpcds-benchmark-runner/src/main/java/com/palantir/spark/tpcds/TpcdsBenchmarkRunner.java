@@ -78,7 +78,8 @@ public final class TpcdsBenchmarkRunner {
             TpcdsSchemas schemas = new TpcdsSchemas();
             TpcdsTableRegistration registration = new TpcdsTableRegistration(paths, dataFileSystem, spark, schemas);
             ExecutorService dataGeneratorThreadPool = Executors.newFixedThreadPool(
-                    config.dataGenerationParallelism(), new ThreadFactoryBuilder()
+                    config.dataGenerationParallelism(),
+                    new ThreadFactoryBuilder()
                             .setDaemon(true)
                             .setNameFormat("data-generator-%d")
                             .build());
