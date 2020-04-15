@@ -64,7 +64,7 @@ jobs:
       - attach_workspace: { at: /home/circleci }
       - restore_cache: { key: 'gradle-wrapper-v2-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}' }
       - restore_cache: { key: 'check-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}' }
-      - run: ./gradlew --parallel --stacktrace --continue check -x test
+      - run: ./gradlew --parallel --stacktrace --continue check idea -x test
       - save_cache:
           key: 'check-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}'
           paths: [ ~/.gradle/caches ]
@@ -108,7 +108,7 @@ jobs:
       - checkout
       - restore_cache: { key: 'gradle-wrapper-v2-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}' }
       - restore_cache: { key: 'unit-test-11-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}' }
-      - run: ./gradlew --parallel --stacktrace --continue test
+      - run: ./gradlew --parallel --stacktrace --continue test -Pcom.palantir.baseline-error-prone.disable
       - save_cache:
           key: 'unit-test-11-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}'
           paths: [ ~/.gradle/caches ]
@@ -117,6 +117,7 @@ jobs:
           when: always
       - store_test_results: { path: ~/junit }
       - store_artifacts: { path: ~/artifacts }
+
 
   build:
     machine: { docker_layer_caching: true }
@@ -143,7 +144,7 @@ jobs:
     environment:
       CIRCLE_TEST_REPORTS: /home/circleci/junit
       CIRCLE_ARTIFACTS: /home/circleci/artifacts
-      JAVA_HOME: /opt/java/jdk-11.0.5_10
+      JAVA_HOME: /opt/java11
       _JAVA_OPTIONS: -Dorg.gradle.internal.launcher.welcomeMessageEnabled=false -Xmx8192m
     steps:
       - attach_workspace: { at: /home/circleci }
@@ -151,9 +152,9 @@ jobs:
       - restore_cache: { key: 'build-11-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}' }
       - run: |
           sudo mkdir -p /opt/java && cd /opt/java && sudo chown -R circleci:circleci .
-          wget -q "https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.5%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz"
-          tar -xzf OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz --transform 's/+/_/'
-      - run: ./gradlew --parallel --stacktrace build -x test -x check
+          curl https://cdn.azul.com/zulu/bin/zulu11.39.15-ca-jdk11.0.7-linux_x64.tar.gz | tar -xzf - -C /opt/java
+          sudo ln -s /opt/java/zulu*/ /opt/java11
+      - run: ./gradlew --parallel --stacktrace build -x test -x check -Pcom.palantir.baseline-error-prone.disable
       - save_cache:
           key: 'build-11-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}'
           paths: [ ~/.gradle/caches ]
@@ -206,6 +207,7 @@ jobs:
       - checkout
       - run: /liche -d . -r . -v
 
+
 workflows:
   version: 2
   build:
@@ -237,7 +239,8 @@ workflows:
 
       - trial-publish:
           requires: [ compile ]
+          filters: { branches: { ignore: develop } }
 
       - publish:
-          requires: [ unit-test, unit-test-11, check, build, build-11 ]
+          requires: [ unit-test, unit-test-11, check, build, build-11, trial-publish ]
           filters: { tags: { only: /.*/ }, branches: { only: develop } }
