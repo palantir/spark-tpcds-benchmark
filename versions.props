@@ -4,4 +4,4 @@ io.dropwizard.metrics:* = 3.2.6
 javax.servlet.jsp:jsp-api = 2.2
 org.immutables:* = 2.8.3
 org.apache.parquet:* = 1.12.0-palantir.7
-org.apache.spark:spark-dist_2.11-hadoop-palantir-bom = 3.0.0-palantir.67
+org.apache.spark:spark-dist_2.11-hadoop-palantir-bom = 3.0.0-palantir.68
