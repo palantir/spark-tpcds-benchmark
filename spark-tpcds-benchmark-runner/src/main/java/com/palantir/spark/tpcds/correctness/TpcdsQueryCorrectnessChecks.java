@@ -63,7 +63,7 @@ public final class TpcdsQueryCorrectnessChecks {
         byte[] resultHash = writtenResult
                 .javaRDD()
                 .map(SingleHashFunction.INSTANCE)
-                .map(hashCode -> SerializableOptional.of(hashCode))
+                .map(SerializableOptional::of)
                 .fold(SerializableOptional.empty(), CombineHashFunction.INSTANCE)
                 .optional
                 .map(HashCode::asBytes)
