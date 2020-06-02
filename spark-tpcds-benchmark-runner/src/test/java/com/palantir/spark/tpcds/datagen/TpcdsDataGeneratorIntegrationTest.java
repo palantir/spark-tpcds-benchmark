@@ -31,7 +31,7 @@ import java.util.UUID;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.jupiter.api.Test;
 
-public final class TpcdsDataGeneratorIntegrationTest extends SharedContextTest {
+public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkTest {
     @Test
     public void testGeneratesAndUploadsData() throws Exception {
         Path destinationDataDirectory = Files.createDirectory(Paths.get("/tmp", "data_" + UUID.randomUUID()));

@@ -17,14 +17,10 @@
 package com.palantir.spark.tpcds.datagen;
 
 import com.palantir.spark.tpcds.config.HadoopConfiguration;
-import java.io.File;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
-import org.spark_project.guava.io.Files;
 
-public abstract class SharedContextTest {
-    static final File TEMPORARY_FOLDER = Files.createTempDir();
-
+public abstract class AbstractLocalSparkTest {
     static final HadoopConfiguration TEST_HADOOP_CONFIGURATION = HadoopConfiguration.builder()
             // .putHadoopConf("fs.defaultFS", "file://" + TEMPORARY_FOLDER.getAbsolutePath())
             .build();

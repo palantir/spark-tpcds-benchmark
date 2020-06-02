@@ -20,7 +20,7 @@ import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
 import java.nio.file.Paths;
 import org.junit.jupiter.api.Test;
 
-public final class GenSortDataGeneratorTest extends SharedContextTest {
+public final class GenSortDataGeneratorTest extends AbstractLocalSparkTest {
     @Test
     public void testGeneratesData() throws Exception {
         GenSortDataGenerator genSortDataGenerator =
