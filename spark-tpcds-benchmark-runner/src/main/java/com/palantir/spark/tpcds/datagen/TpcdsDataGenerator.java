@@ -38,10 +38,7 @@ import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,6 +54,7 @@ public final class TpcdsDataGenerator {
     private final List<Integer> dataScalesGb;
     private final boolean shouldOverwriteData;
     private final FileSystem dataFileSystem;
+    private final ParquetCopier parquetCopier;
     private final SparkSession spark;
     private final TpcdsPaths paths;
     private final TpcdsSchemas schemas;
@@ -67,6 +65,7 @@ public final class TpcdsDataGenerator {
             List<Integer> dataScalesGb,
             boolean shouldOverwriteData,
             FileSystem dataFileSystem,
+            ParquetCopier parquetCopier,
             SparkSession spark,
             TpcdsPaths paths,
             TpcdsSchemas schemas,
@@ -75,6 +74,7 @@ public final class TpcdsDataGenerator {
         this.dataScalesGb = dataScalesGb;
         this.shouldOverwriteData = shouldOverwriteData;
         this.dataFileSystem = dataFileSystem;
+        this.parquetCopier = parquetCopier;
         this.spark = spark;
         this.paths = paths;
         this.schemas = schemas;
@@ -136,17 +136,19 @@ public final class TpcdsDataGenerator {
                     throw new IllegalStateException(
                             String.format("Failed to make tpcds temporary data dir at %s", tpcdsTempDir));
                 }
+                String[] dsdgenCommand = {
+                    resolvedDsdgenFile.toFile().getAbsolutePath(),
+                    "-DIR",
+                    tpcdsTempDir.getAbsolutePath(),
+                    "-SCALE",
+                    Integer.toString(scale),
+                    "-SUFFIX",
+                    ".csv",
+                    "-DELIMITER",
+                    "|"
+                };
                 Process dsdgenProcess = new ProcessBuilder()
-                        .command(
-                                resolvedDsdgenFile.toFile().getAbsolutePath(),
-                                "-DIR",
-                                tpcdsTempDir.getAbsolutePath(),
-                                "-SCALE",
-                                Integer.toString(scale),
-                                "-SUFFIX",
-                                ".csv",
-                                "-DELIMITER",
-                                "|")
+                        .command(dsdgenCommand)
                         .inheritIO()
                         .directory(resolvedDsdgenFile.toFile().getParentFile())
                         .start();
@@ -186,13 +188,11 @@ public final class TpcdsDataGenerator {
         Stream.of(TpcdsTable.values())
                 .map(table -> {
                     ListenableFuture<?> saveAsParquetTask = dataGeneratorThreadPool.submit(() -> {
-                        StructType schema = schemas.getSchema(table);
-                        Dataset<Row> tableDataset = spark.read()
-                                .format("csv")
-                                .option("delimiter", "|")
-                                .schema(schema)
-                                .load(paths.tableCsvFile(scale, table));
-                        tableDataset.write().format("parquet").save(paths.tableParquetLocation(scale, table));
+                        parquetCopier.copy(
+                                spark,
+                                schemas.getSchema(table),
+                                paths.tableCsvFile(scale, table),
+                                paths.tableParquetLocation(scale, table));
                     });
                     saveAsParquetTask.addListener(
                             () -> {

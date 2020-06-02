@@ -16,6 +16,8 @@
 
 package com.palantir.spark.tpcds.datagen;
 
+import static org.mockito.Mockito.mock;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.palantir.spark.tpcds.paths.TpcdsPaths;
@@ -23,26 +25,33 @@ import com.palantir.spark.tpcds.schemas.TpcdsSchemas;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
+import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.jupiter.api.Test;
 
-public final class TpcdsDataGeneratorTest extends SharedContextTest {
+public final class TpcdsDataGeneratorIntegrationTest extends SharedContextTest {
     @Test
     public void testGeneratesAndUploadsData() throws Exception {
-        Path destinationDataDirectory = Files.createTempDirectory("tpdcs_data");
+        Path destinationDataDirectory = Files.createDirectory(Paths.get("/tmp", "data_" + UUID.randomUUID()));
 
         FileSystem dataFileSystem = FileSystem.get(
                 URI.create("file://" + destinationDataDirectory.toFile().getAbsolutePath()),
                 TEST_HADOOP_CONFIGURATION.toHadoopConf());
+        Path workingDir = Files.createDirectory(Paths.get("/tmp", "working_dir_" + UUID.randomUUID()));
         TpcdsDataGenerator generator = new TpcdsDataGenerator(
-                Files.createTempDirectory("tpcds_working_dir"),
+                workingDir,
                 ImmutableList.of(1),
                 false,
                 dataFileSystem,
+                mock(ParquetCopier.class), // no need to test spark read and write.
                 sparkSession,
                 new TpcdsPaths("file://" + destinationDataDirectory.toFile().getAbsolutePath()),
                 new TpcdsSchemas(),
                 MoreExecutors.newDirectExecutorService());
         generator.generateData();
+        Stream<Path> generatedData =
+                Files.list(Paths.get(destinationDataDirectory.toString(), "tpcds_data", "scale=1"));
     }
 }

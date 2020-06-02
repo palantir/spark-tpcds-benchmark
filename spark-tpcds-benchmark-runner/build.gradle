@@ -27,7 +27,9 @@ dependencies {
     compile 'com.palantir.safe-logging:preconditions'
     compile 'org.apache.spark:spark-sql_2.11'
 
+    testCompile 'org.assertj:assertj-core'
     testCompile 'org.junit.jupiter:junit-jupiter'
+    testCompile 'org.mockito:mockito-core'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
     annotationProcessor 'org.immutables:value'

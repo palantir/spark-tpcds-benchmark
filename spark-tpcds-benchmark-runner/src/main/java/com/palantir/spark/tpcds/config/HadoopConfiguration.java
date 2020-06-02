@@ -36,10 +36,14 @@ public interface HadoopConfiguration {
     Map<String, String> hadoopConf();
 
     @Value.Derived
-    default Configuration toHadoopConf() throws MalformedURLException {
+    default Configuration toHadoopConf() {
         Configuration hadoopConf = new Configuration();
         for (Path hadoopConfDir : hadoopConfDirs()) {
-            hadoopConf = loadConfFromFile(hadoopConf, hadoopConfDir.toFile());
+            try {
+                hadoopConf = loadConfFromFile(hadoopConf, hadoopConfDir.toFile());
+            } catch (MalformedURLException e) {
+                throw new RuntimeException("Malformed URL when parsing Hadoop config", e);
+            }
         }
         hadoopConf().forEach(hadoopConf::set);
         return hadoopConf;

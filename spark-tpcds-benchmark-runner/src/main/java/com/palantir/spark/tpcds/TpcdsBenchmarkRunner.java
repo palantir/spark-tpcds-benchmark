@@ -19,6 +19,7 @@ package com.palantir.spark.tpcds;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
 import com.palantir.spark.tpcds.correctness.TpcdsQueryCorrectnessChecks;
+import com.palantir.spark.tpcds.datagen.DefaultParquetCopier;
 import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
 import com.palantir.spark.tpcds.metrics.TpcdsBenchmarkMetrics;
 import com.palantir.spark.tpcds.paths.TpcdsPaths;
@@ -81,6 +82,7 @@ public final class TpcdsBenchmarkRunner {
                     config.dataScalesGb(),
                     config.overwriteData(),
                     dataFileSystem,
+                    new DefaultParquetCopier(),
                     spark,
                     paths,
                     schemas,
