@@ -33,9 +33,11 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     private static final Logger log = LoggerFactory.getLogger(GenSortDataGenerator.class);
 
     private static final Path GEN_SORT_MACOS_PATH = Paths.get("service", "bin", "gensort", "gensort_osx");
+
     private static final Path GENSORT_TGZ_LINUX_PATH = Paths.get("service", "bin", "gensort", "gensort.tgz");
-    private static final String GENSORT_LINUX_BIN_DIR_NAME = "gensort";
     private static final String GENSORT_LINUX_BINARY_FILE_NAME = "gensort";
+
+    private static final String GENSORT_BIN_DIR_NAME = "gensort";
 
     private final SparkSession spark;
     private final TpcdsBenchmarkConfig config;
@@ -86,7 +88,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             throw new UnsupportedOperationException("Cannot generate data using Windows.");
         }
         Path binaryPath;
-        Path genSortBinDir = Files.createDirectory(tempDir.resolve(GENSORT_LINUX_BIN_DIR_NAME));
+        Path genSortBinDir = Files.createDirectory(tempDir.resolve(GENSORT_BIN_DIR_NAME));
         if (SystemUtils.IS_OS_MAC) {
             FileUtils.copyFileToDirectory(GEN_SORT_MACOS_PATH.toFile(), genSortBinDir.toFile());
             binaryPath = Paths.get(

@@ -22,5 +22,5 @@ testDataDir: file:///tmp/hdfs/data/tpcds/test_data
 iterations: 1
 sort:
   enabled: true
-  numRecords: 1000
+  numRecords: 100000
 #excludeSqlQueries: false

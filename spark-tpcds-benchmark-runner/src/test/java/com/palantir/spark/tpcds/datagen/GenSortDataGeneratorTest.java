@@ -19,6 +19,7 @@ package com.palantir.spark.tpcds.datagen;
 import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
 import java.nio.file.Paths;
 import org.apache.spark.sql.SparkSession;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -35,10 +36,16 @@ public final class GenSortDataGeneratorTest {
                 .getOrCreate();
     }
 
+    @AfterEach
+    public void after() {
+        sparkSession.stop();
+    }
+
     @Test
     public void testGeneratesData() throws Exception {
         GenSortDataGenerator genSortDataGenerator =
                 new GenSortDataGenerator(sparkSession, TpcdsBenchmarkConfig.parse(Paths.get("var/conf/config.yml")));
+        // Should not throw.
         genSortDataGenerator.generate();
     }
 }

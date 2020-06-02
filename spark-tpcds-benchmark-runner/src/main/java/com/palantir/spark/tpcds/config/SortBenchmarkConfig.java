@@ -24,15 +24,9 @@ import org.immutables.value.Value;
 @ImmutablesConfigStyle
 @JsonDeserialize(as = ImmutableSortBenchmarkConfig.class)
 public interface SortBenchmarkConfig {
-    @Value.Default
-    default boolean enabled() {
-        return true;
-    }
+    boolean enabled();
 
-    @Value.Default
-    default long numRecords() {
-        return 100_000;
-    }
+    long numRecords();
 
     class Builder extends ImmutableSortBenchmarkConfig.Builder {}
 
