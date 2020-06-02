@@ -18,19 +18,12 @@ package com.palantir.spark.tpcds.datagen;
 
 import com.palantir.logsafe.SafeArg;
 import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import com.palantir.spark.tpcds.util.DataGenUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.zip.GZIPInputStream;
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
@@ -60,7 +53,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             FileUtils.deleteDirectory(tempDir.toFile());
         }
         if (!tempDir.toFile().mkdirs()) {
-            throw new IllegalStateException(String.format("Could not create dsdgen work directory at %s", tempDir));
+            throw new IllegalStateException(String.format("Could not create temporary work directory at %s", tempDir));
         }
         try {
             final Path genSortFilePath = extractBinary(tempDir);
@@ -92,56 +85,18 @@ public final class GenSortDataGenerator implements SortDataGenerator {
         if (SystemUtils.IS_OS_WINDOWS) {
             throw new UnsupportedOperationException("Cannot generate data using Windows.");
         }
-        Path binaryPath = unzipAndCopyBinary(tempDir);
-        makeFileExecutable(binaryPath);
-        return binaryPath;
-    }
-
-    private Path unzipAndCopyBinary(Path tempDir) throws IOException {
+        Path binaryPath;
         Path genSortBinDir = Files.createDirectory(tempDir.resolve(GENSORT_LINUX_BIN_DIR_NAME));
         if (SystemUtils.IS_OS_MAC) {
             FileUtils.copyFileToDirectory(GEN_SORT_MACOS_PATH.toFile(), genSortBinDir.toFile());
-            return Paths.get(
+            binaryPath = Paths.get(
                     genSortBinDir.toString(), GEN_SORT_MACOS_PATH.getFileName().toString());
+        } else {
+            binaryPath =
+                    DataGenUtils.extractBinary(GENSORT_TGZ_LINUX_PATH, GENSORT_LINUX_BINARY_FILE_NAME, genSortBinDir);
         }
 
-        Path genSortFile = null;
-        try (FileInputStream rawTarInput = new FileInputStream(GENSORT_TGZ_LINUX_PATH.toFile());
-                BufferedInputStream bufferingInput = new BufferedInputStream(rawTarInput);
-                GZIPInputStream decompressingInput = new GZIPInputStream(bufferingInput);
-                TarArchiveInputStream untarringInput = new TarArchiveInputStream(decompressingInput)) {
-            TarArchiveEntry entry;
-            while ((entry = untarringInput.getNextTarEntry()) != null) {
-                Path outputPath = genSortBinDir.resolve(entry.getName());
-                if (entry.isDirectory()) {
-                    Files.createDirectory(outputPath);
-                } else {
-                    try (FileOutputStream output = new FileOutputStream(outputPath.toFile())) {
-                        IOUtils.copy(untarringInput, output);
-                    }
-                }
-                if (outputPath.toFile().getName().equals(GENSORT_LINUX_BINARY_FILE_NAME)) {
-                    genSortFile = outputPath;
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(
-                    String.format(
-                            "Failed to extract tpcds tar at %s",
-                            GENSORT_TGZ_LINUX_PATH.toFile().getAbsolutePath()),
-                    e);
-        }
-        if (genSortFile == null) {
-            throw new FileNotFoundException(
-                    "Gensort binary was not found in the tarball; was this benchmark runner packaged correctly?");
-        }
-        return genSortFile;
-    }
-
-    private void makeFileExecutable(Path genSortFile) {
-        if (!genSortFile.toFile().canExecute() && !genSortFile.toFile().setExecutable(true, true)) {
-            throw new IllegalStateException(
-                    String.format("Could not make the gensort binary at %s executable.", genSortFile));
-        }
+        DataGenUtils.makeFileExecutable(binaryPath);
+        return binaryPath;
     }
 }
