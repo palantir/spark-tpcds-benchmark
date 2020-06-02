@@ -34,7 +34,8 @@ public final class GenSortDataGenerator implements SortDataGenerator {
 
     private static final Path GEN_SORT_MACOS_PATH = Paths.get("service", "bin", "gensort", "gensort_osx");
 
-    private static final Path GENSORT_TGZ_LINUX_PATH = Paths.get("service", "bin", "gensort", "gensort.tgz");
+    private static final Path GENSORT_TGZ_LINUX_PATH =
+            Paths.get("service", "bin", "gensort", "gensort-linux-1.5" + ".tar.gz");
     private static final String GENSORT_LINUX_BINARY_FILE_NAME = "gensort";
 
     private static final String GENSORT_BIN_DIR_NAME = "gensort";
