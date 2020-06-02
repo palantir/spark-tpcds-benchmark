@@ -21,9 +21,8 @@ import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 
 public abstract class AbstractLocalSparkTest {
-    static final HadoopConfiguration TEST_HADOOP_CONFIGURATION = HadoopConfiguration.builder()
-            // .putHadoopConf("fs.defaultFS", "file://" + TEMPORARY_FOLDER.getAbsolutePath())
-            .build();
+    static final HadoopConfiguration TEST_HADOOP_CONFIGURATION =
+            HadoopConfiguration.builder().build();
 
     SparkSession sparkSession;
 
