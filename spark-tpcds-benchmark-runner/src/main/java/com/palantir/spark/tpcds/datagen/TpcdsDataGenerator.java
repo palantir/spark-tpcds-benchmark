@@ -54,7 +54,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class TpcdsDataGenerator {
-
     private static final Logger log = LoggerFactory.getLogger(TpcdsDataGenerator.class);
 
     private static final Path DSDGEN_TGZ_MACOS_PATH = Paths.get("service", "bin", "tpcds", "tpcds_osx.tgz");
@@ -85,35 +84,36 @@ public final class TpcdsDataGenerator {
     }
 
     public void generateDataIfNecessary() throws IOException {
-        if (config.generateData()) {
-            spark.sparkContext().setJobDescription("data-generation");
-            Path tempDir = config.dsdgenWorkLocalDir();
-            if (tempDir.toFile().isDirectory()) {
-                FileUtils.deleteDirectory(tempDir.toFile());
-            }
-            if (!tempDir.toFile().mkdirs()) {
-                throw new IllegalStateException(String.format("Could not create dsdgen work directory at %s", tempDir));
-            }
-            tempDir.toFile().deleteOnExit();
+        if (!config.generateData()) {
+            return;
+        }
+        spark.sparkContext().setJobDescription("data-generation");
+        Path tempDir = config.dsdgenWorkLocalDir();
+        if (tempDir.toFile().isDirectory()) {
+            FileUtils.deleteDirectory(tempDir.toFile());
+        }
+        if (!tempDir.toFile().mkdirs()) {
+            throw new IllegalStateException(String.format("Could not create dsdgen work directory at %s", tempDir));
+        }
+        tempDir.toFile().deleteOnExit();
+        try {
+            final Path dsdgenFile = extractTpcdsBinary(tempDir);
+            config.dataScalesGb().stream()
+                    .map(scale -> generateAndUploadDataForScale(scale, tempDir, dsdgenFile))
+                    .collect(Collectors.toList()) // Always collect to force kick off all tasks
+                    .forEach(TpcdsDataGenerator::waitForFuture);
+        } catch (Exception e) {
             try {
-                final Path dsdgenFile = extractTpcdsBinary(tempDir);
-                config.dataScalesGb().stream()
-                        .map(scale -> generateAndUploadDataForScale(scale, tempDir, dsdgenFile))
-                        .collect(Collectors.toList()) // Always collect to force kick off all tasks
-                        .forEach(TpcdsDataGenerator::waitForFuture);
-            } catch (Exception e) {
-                try {
-                    dataGeneratorThreadPool.shutdownNow();
-                } catch (Exception e2) {
-                    log.warn("Error occurred while shutting down the data generator thread pool.", e);
-                }
-                throw e;
-            } finally {
-                try {
-                    FileUtils.deleteDirectory(tempDir.toFile());
-                } catch (IOException e) {
-                    log.warn("Failed to delete temporary working directory.", SafeArg.of("dsdgenWorkDir", tempDir), e);
-                }
+                dataGeneratorThreadPool.shutdownNow();
+            } catch (Exception e2) {
+                log.warn("Error occurred while shutting down the data generator thread pool.", e);
+            }
+            throw e;
+        } finally {
+            try {
+                FileUtils.deleteDirectory(tempDir.toFile());
+            } catch (IOException e) {
+                log.warn("Failed to delete temporary working directory.", SafeArg.of("dsdgenWorkDir", tempDir), e);
             }
         }
     }

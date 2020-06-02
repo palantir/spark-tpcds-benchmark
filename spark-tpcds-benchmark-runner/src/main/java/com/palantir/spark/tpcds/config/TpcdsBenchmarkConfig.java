@@ -61,10 +61,7 @@ public interface TpcdsBenchmarkConfig {
         return 1;
     }
 
-    @Value.Default
-    default boolean includeSortBenchmark() {
-        return true;
-    }
+    SortBenchmarkConfig sort();
 
     @Value.Default
     default boolean excludeSqlQueries() {
