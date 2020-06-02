@@ -24,11 +24,9 @@ import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
 import com.palantir.spark.tpcds.constants.TpcdsTable;
 import com.palantir.spark.tpcds.paths.TpcdsPaths;
 import com.palantir.spark.tpcds.schemas.TpcdsSchemas;
-import java.io.BufferedInputStream;
+import com.palantir.spark.tpcds.util.DataGenUtils;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,11 +36,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.zip.GZIPInputStream;
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -54,7 +48,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class TpcdsDataGenerator {
-
     private static final Logger log = LoggerFactory.getLogger(TpcdsDataGenerator.class);
 
     private static final Path DSDGEN_TGZ_MACOS_PATH = Paths.get("service", "bin", "tpcds", "tpcds_osx.tgz");
@@ -85,35 +78,36 @@ public final class TpcdsDataGenerator {
     }
 
     public void generateDataIfNecessary() throws IOException {
-        if (config.generateData()) {
-            spark.sparkContext().setJobDescription("data-generation");
-            Path tempDir = config.dsdgenWorkLocalDir();
-            if (tempDir.toFile().isDirectory()) {
-                FileUtils.deleteDirectory(tempDir.toFile());
-            }
-            if (!tempDir.toFile().mkdirs()) {
-                throw new IllegalStateException(String.format("Could not create dsdgen work directory at %s", tempDir));
-            }
-            tempDir.toFile().deleteOnExit();
+        if (!config.generateData()) {
+            return;
+        }
+        spark.sparkContext().setJobDescription("data-generation");
+        Path tempDir = config.dsdgenWorkLocalDir();
+        if (tempDir.toFile().isDirectory()) {
+            FileUtils.deleteDirectory(tempDir.toFile());
+        }
+        if (!tempDir.toFile().mkdirs()) {
+            throw new IllegalStateException(String.format("Could not create dsdgen work directory at %s", tempDir));
+        }
+        tempDir.toFile().deleteOnExit();
+        try {
+            final Path dsdgenFile = extractTpcdsBinary(tempDir);
+            config.dataScalesGb().stream()
+                    .map(scale -> generateAndUploadDataForScale(scale, tempDir, dsdgenFile))
+                    .collect(Collectors.toList()) // Always collect to force kick off all tasks
+                    .forEach(TpcdsDataGenerator::waitForFuture);
+        } catch (Exception e) {
             try {
-                final Path dsdgenFile = extractTpcdsBinary(tempDir);
-                config.dataScalesGb().stream()
-                        .map(scale -> generateAndUploadDataForScale(scale, tempDir, dsdgenFile))
-                        .collect(Collectors.toList()) // Always collect to force kick off all tasks
-                        .forEach(TpcdsDataGenerator::waitForFuture);
-            } catch (Exception e) {
-                try {
-                    dataGeneratorThreadPool.shutdownNow();
-                } catch (Exception e2) {
-                    log.warn("Error occurred while shutting down the data generator thread pool.", e);
-                }
-                throw e;
-            } finally {
-                try {
-                    FileUtils.deleteDirectory(tempDir.toFile());
-                } catch (IOException e) {
-                    log.warn("Failed to delete temporary working directory.", SafeArg.of("dsdgenWorkDir", tempDir), e);
-                }
+                dataGeneratorThreadPool.shutdownNow();
+            } catch (Exception e2) {
+                log.warn("Error occurred while shutting down the data generator thread pool.", e);
+            }
+            throw e;
+        } finally {
+            try {
+                FileUtils.deleteDirectory(tempDir.toFile());
+            } catch (IOException e) {
+                log.warn("Failed to delete temporary working directory.", SafeArg.of("dsdgenWorkDir", tempDir), e);
             }
         }
     }
@@ -247,41 +241,8 @@ public final class TpcdsDataGenerator {
     private Path extractTpcdsBinary(Path tempDir) throws IOException {
         Path dsdgenTgzPath = findDsdgenTgz();
         Path dsdgenBinDir = Files.createDirectory(tempDir.resolve(TPCDS_BIN_DIR_NAME));
-        Path dsdgenFile = null;
-        try (FileInputStream rawTarInput = new FileInputStream(dsdgenTgzPath.toFile());
-                BufferedInputStream bufferingInput = new BufferedInputStream(rawTarInput);
-                GZIPInputStream decompressingInput = new GZIPInputStream(bufferingInput);
-                TarArchiveInputStream untarringInput = new TarArchiveInputStream(decompressingInput)) {
-            TarArchiveEntry entry;
-            while ((entry = untarringInput.getNextTarEntry()) != null) {
-                Path outputPath = dsdgenBinDir.resolve(entry.getName());
-                if (entry.isDirectory()) {
-                    Files.createDirectory(outputPath);
-                } else {
-                    try (FileOutputStream output = new FileOutputStream(outputPath.toFile())) {
-                        IOUtils.copy(untarringInput, output);
-                    }
-                }
-                if (outputPath.toFile().getName().equals(DSDGEN_BINARY_FILE_NAME)) {
-                    dsdgenFile = outputPath;
-                    if (!dsdgenFile.toFile().canExecute()
-                            && !dsdgenFile.toFile().setExecutable(true, true)) {
-                        throw new IllegalStateException(
-                                String.format("Could not make the dsdgen binary at %s executable.", dsdgenFile));
-                    }
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(
-                    String.format(
-                            "Failed to extract tpcds tar at %s",
-                            dsdgenTgzPath.toFile().getAbsolutePath()),
-                    e);
-        }
-        if (dsdgenFile == null) {
-            throw new FileNotFoundException(
-                    "Dsdgen binary was not found in the tarball;" + " was this benchmark runner packaged correctly?");
-        }
+        Path dsdgenFile = DataGenUtils.extractBinary(dsdgenTgzPath, DSDGEN_BINARY_FILE_NAME, dsdgenBinDir);
+        DataGenUtils.makeFileExecutable(dsdgenFile);
         return dsdgenFile;
     }
 

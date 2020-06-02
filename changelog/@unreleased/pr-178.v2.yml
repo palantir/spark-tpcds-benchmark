@@ -1,0 +1,6 @@
+type: feature
+feature:
+  description: |-
+    Add ability to generate data from the gensort program used in http://sortbenchmark.org/.
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/178
