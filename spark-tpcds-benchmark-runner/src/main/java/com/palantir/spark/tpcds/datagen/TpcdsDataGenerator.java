@@ -241,7 +241,7 @@ public final class TpcdsDataGenerator {
     private Path extractTpcdsBinary(Path tempDir) throws IOException {
         Path dsdgenTgzPath = findDsdgenTgz();
         Path dsdgenBinDir = Files.createDirectory(tempDir.resolve(TPCDS_BIN_DIR_NAME));
-        Path dsdgenFile = DataGenUtils.extractBinary(dsdgenTgzPath, TPCDS_BIN_DIR_NAME, dsdgenBinDir);
+        Path dsdgenFile = DataGenUtils.extractBinary(dsdgenTgzPath, DSDGEN_BINARY_FILE_NAME, dsdgenBinDir);
         DataGenUtils.makeFileExecutable(dsdgenFile);
         return dsdgenFile;
     }
