@@ -1,8 +1,6 @@
 type: feature
 feature:
   description: |-
-    Add ability to generate data from the gensort program.
-
-    Add ability to generate data from the gensort program used in http://sortbenchmark.org/. This PR does not yet upload the data into the backing filesystem or make the existing sort benchmarks use it. These will be done in follow up PRs in order to keep the diff manageable.
+    Add ability to generate data from the gensort program used in http://sortbenchmark.org/.
   links:
   - https://github.com/palantir/spark-tpcds-benchmark/pull/178
