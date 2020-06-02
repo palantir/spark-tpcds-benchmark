@@ -18,17 +18,48 @@ package com.palantir.spark.tpcds.config;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.palantir.spark.tpcds.immutables.ImmutablesConfigStyle;
+import java.io.File;
+import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import org.apache.hadoop.conf.Configuration;
 import org.immutables.value.Value;
 
 @Value.Immutable
 @ImmutablesConfigStyle
 @JsonDeserialize(as = ImmutableHadoopConfiguration.class)
 public interface HadoopConfiguration {
-
     List<Path> hadoopConfDirs();
 
     Map<String, String> hadoopConf();
+
+    @Value.Derived
+    default Configuration toHadoopConf() throws MalformedURLException {
+        Configuration hadoopConf = new Configuration();
+        for (Path hadoopConfDir : hadoopConfDirs()) {
+            hadoopConf = loadConfFromFile(hadoopConf, hadoopConfDir.toFile());
+        }
+        hadoopConf().forEach(hadoopConf::set);
+        return hadoopConf;
+    }
+
+    static Configuration loadConfFromFile(Configuration conf, File confFile) throws MalformedURLException {
+        Configuration resolvedConfiguration = conf;
+        if (confFile.isDirectory()) {
+            for (File child : Optional.ofNullable(confFile.listFiles()).orElse(new File[0])) {
+                resolvedConfiguration = loadConfFromFile(resolvedConfiguration, child);
+            }
+        } else if (confFile.isFile() && confFile.getName().endsWith(".xml")) {
+            resolvedConfiguration.addResource(confFile.toURL());
+        }
+        return resolvedConfiguration;
+    }
+
+    class Builder extends ImmutableHadoopConfiguration.Builder {}
+
+    static Builder builder() {
+        return new Builder();
+    }
 }

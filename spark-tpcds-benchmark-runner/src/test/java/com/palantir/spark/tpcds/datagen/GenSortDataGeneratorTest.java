@@ -18,29 +18,9 @@ package com.palantir.spark.tpcds.datagen;
 
 import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
 import java.nio.file.Paths;
-import org.apache.spark.sql.SparkSession;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public final class GenSortDataGeneratorTest {
-    private SparkSession sparkSession;
-
-    @BeforeEach
-    public void beforeEach() {
-        sparkSession = SparkSession.builder()
-                .appName("tests")
-                .master("local")
-                .config("spark.ui.enabled", false)
-                .config("spark.ui.showConsoleProgress", false)
-                .getOrCreate();
-    }
-
-    @AfterEach
-    public void after() {
-        sparkSession.stop();
-    }
-
+public final class GenSortDataGeneratorTest extends SharedContextTest {
     @Test
     public void testGeneratesData() throws Exception {
         GenSortDataGenerator genSortDataGenerator =

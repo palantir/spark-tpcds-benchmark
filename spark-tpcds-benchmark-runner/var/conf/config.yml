@@ -5,9 +5,7 @@ dsdgenWorkLocalDir: /tmp/tpcds_work_dir
 generateData: true
 hadoop:
   hadoopConfDirs: []
-  hadoopConf:
-    #fs.defaultFS: hdfs://localhost:8020
-    fs.defaultFS: file:///tmp/hdfs
+  hadoopConf: {}
 overwriteData: false
 spark:
   #executorCores: 1
