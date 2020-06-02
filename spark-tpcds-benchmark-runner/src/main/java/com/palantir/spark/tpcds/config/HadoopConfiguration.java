@@ -17,6 +17,7 @@
 package com.palantir.spark.tpcds.config;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.spark.tpcds.immutables.ImmutablesConfigStyle;
 import java.io.File;
 import java.net.MalformedURLException;
@@ -42,7 +43,7 @@ public interface HadoopConfiguration {
             try {
                 hadoopConf = loadConfFromFile(hadoopConf, hadoopConfDir.toFile());
             } catch (MalformedURLException e) {
-                throw new RuntimeException("Malformed URL when parsing Hadoop config", e);
+                throw new SafeRuntimeException("Malformed URL when parsing Hadoop config", e);
             }
         }
         hadoopConf().forEach(hadoopConf::set);
