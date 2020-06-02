@@ -16,6 +16,7 @@
 
 package com.palantir.spark.tpcds.datagen;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableList;
@@ -27,7 +28,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.jupiter.api.Test;
 
@@ -51,7 +51,10 @@ public final class TpcdsDataGeneratorIntegrationTest extends SharedContextTest {
                 new TpcdsSchemas(),
                 MoreExecutors.newDirectExecutorService());
         generator.generateData();
-        Stream<Path> generatedData =
-                Files.list(Paths.get(destinationDataDirectory.toString(), "tpcds_data", "scale=1"));
+        long numGeneratedCsvFiles = Files.list(
+                        Paths.get(destinationDataDirectory.toString(), "tpcds_data", "scale=1", "raw_csv"))
+                .filter(path -> path.toString().endsWith(".csv"))
+                .count();
+        assertThat(numGeneratedCsvFiles).isEqualTo(25);
     }
 }
