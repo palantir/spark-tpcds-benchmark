@@ -91,7 +91,7 @@ public final class DataGenUtils {
 
     public static void uploadFiles(
             FileSystem destinationFileSystem,
-            org.apache.hadoop.fs.Path rootDestinationPath,
+            String rootDestinationPath,
             File sourceDir,
             ListeningExecutorService uploaderThreadPool) {
         Optional.ofNullable(sourceDir.listFiles())

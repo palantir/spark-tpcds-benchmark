@@ -56,6 +56,10 @@ public final class TpcdsPaths {
         return String.join(File.separator, rootGensortDataDir(), "raw_csv");
     }
 
+    public String gensortParquetDir() {
+        return String.join(File.separator, rootGensortDataDir(), "raw_parquet");
+    }
+
     public String experimentResultLocation(int scale, String queryName) {
         return String.join(
                 File.separator, rootTpcdsDataDir(scale), "experiments", StringUtils.removeEnd(queryName, ".sql"));

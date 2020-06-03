@@ -20,10 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.palantir.spark.tpcds.paths.TpcdsPaths;
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.stream.Stream;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.jupiter.api.Test;
 
@@ -39,11 +39,36 @@ public final class GenSortDataGeneratorTest extends AbstractLocalSparkTest {
                 FileSystem.get(URI.create(fullyQualifiedDestinationDir), TEST_HADOOP_CONFIGURATION.toHadoopConf());
 
         GenSortDataGenerator genSortDataGenerator = new GenSortDataGenerator(
-                sparkSession, dataFileSystem, new TpcdsPaths(fullyQualifiedDestinationDir), workingDir, 100);
+                sparkSession,
+                dataFileSystem,
+                new DefaultParquetTransformer(), // test that our schema works by copying for real.
+                new TpcdsPaths(fullyQualifiedDestinationDir),
+                workingDir,
+                100);
         genSortDataGenerator.generate();
-        try (Stream<String> generatedLines = Files.lines(
-                Paths.get(destinationDataDirectory.toString(), "gensort_data", "raw_csv", "gensort-data-file"))) {
-            assertThat(generatedLines.count()).isEqualTo(100);
-        }
+
+        List<String> generatedLines = read(
+                Paths.get(destinationDataDirectory.toString(), "gensort_data", "raw_csv", "gensort-data-file"),
+                "csv",
+                "\n");
+        assertThat(generatedLines).hasSize(100);
+
+        List<String> copiedParquet = read(
+                Paths.get(destinationDataDirectory.toString(), "gensort_data", "raw_parquet", "gensort-data-file"),
+                "parquet",
+                "\n");
+        assertThat(copiedParquet).hasSameElementsAs(generatedLines);
+    }
+
+    private List<String> read(Path path, String format, String delimiter) {
+        return sparkSession
+                .read()
+                .option("delimiter", delimiter)
+                .format(format)
+                .load(path.toString())
+                .collectAsList()
+                .stream()
+                .map(row -> row.getString(0))
+                .collect(Collectors.toList());
     }
 }

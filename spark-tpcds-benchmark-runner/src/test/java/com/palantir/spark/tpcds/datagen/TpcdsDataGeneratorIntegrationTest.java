@@ -47,7 +47,7 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
                 ImmutableList.of(1),
                 false,
                 dataFileSystem,
-                mock(ParquetCopier.class), // no need to test spark read and write.
+                mock(ParquetTransformer.class), // no need to test spark read and write.
                 sparkSession,
                 new TpcdsPaths(fullyQualifiedDestinationDir),
                 new TpcdsSchemas(),

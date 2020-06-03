@@ -53,8 +53,8 @@ public final class TpcdsDataGenerator {
     private final Path dsdgenWorkLocalDir;
     private final List<Integer> dataScalesGb;
     private final boolean shouldOverwriteData;
-    private final FileSystem dataFileSystem;
-    private final ParquetCopier parquetCopier;
+    private final FileSystem destinationFileSystem;
+    private final ParquetTransformer parquetTransformer;
     private final SparkSession spark;
     private final TpcdsPaths paths;
     private final TpcdsSchemas schemas;
@@ -64,8 +64,8 @@ public final class TpcdsDataGenerator {
             Path dsdgenWorkLocalDir,
             List<Integer> dataScalesGb,
             boolean shouldOverwriteData,
-            FileSystem dataFileSystem,
-            ParquetCopier parquetCopier,
+            FileSystem destinationFileSystem,
+            ParquetTransformer parquetTransformer,
             SparkSession spark,
             TpcdsPaths paths,
             TpcdsSchemas schemas,
@@ -73,8 +73,8 @@ public final class TpcdsDataGenerator {
         this.dsdgenWorkLocalDir = dsdgenWorkLocalDir;
         this.dataScalesGb = dataScalesGb;
         this.shouldOverwriteData = shouldOverwriteData;
-        this.dataFileSystem = dataFileSystem;
-        this.parquetCopier = parquetCopier;
+        this.destinationFileSystem = destinationFileSystem;
+        this.parquetTransformer = parquetTransformer;
         this.spark = spark;
         this.paths = paths;
         this.schemas = schemas;
@@ -117,8 +117,9 @@ public final class TpcdsDataGenerator {
         ListenableFuture<?> uploadDataForScaleTask = dataGeneratorThreadPool.submit(() -> {
             try {
                 org.apache.hadoop.fs.Path rootDataPath = new org.apache.hadoop.fs.Path(paths.tpcdsCsvDir(scale));
-                if (!dataFileSystem.exists(rootDataPath) || shouldOverwriteData) {
-                    if (dataFileSystem.isDirectory(rootDataPath) && !dataFileSystem.delete(rootDataPath, true)) {
+                if (!destinationFileSystem.exists(rootDataPath) || shouldOverwriteData) {
+                    if (destinationFileSystem.isDirectory(rootDataPath)
+                            && !destinationFileSystem.delete(rootDataPath, true)) {
                         throw new IllegalStateException(
                                 String.format("Failed to clear data file directory at %s.", rootDataPath));
                     }
@@ -160,7 +161,8 @@ public final class TpcdsDataGenerator {
                 log.info(
                         "Uploading tpcds data from location {}.",
                         SafeArg.of("localLocation", tpcdsTempDir.getAbsolutePath()));
-                DataGenUtils.uploadFiles(dataFileSystem, rootDataPath, tpcdsTempDir, dataGeneratorThreadPool);
+                DataGenUtils.uploadFiles(
+                        destinationFileSystem, rootDataPath.toString(), tpcdsTempDir, dataGeneratorThreadPool);
                 saveTablesAsParquet(scale);
             } catch (InterruptedException | IOException e) {
                 throw new RuntimeException(e);
@@ -176,9 +178,9 @@ public final class TpcdsDataGenerator {
         // If overwriting, invalidate the previous correctness results.
         org.apache.hadoop.fs.Path correctnessHashesRoot =
                 new org.apache.hadoop.fs.Path(paths.experimentCorrectnessHashesRoot(scale));
-        if (dataFileSystem.exists(correctnessHashesRoot)
+        if (destinationFileSystem.exists(correctnessHashesRoot)
                 && shouldOverwriteData
-                && !dataFileSystem.delete(correctnessHashesRoot, true)) {
+                && !destinationFileSystem.delete(correctnessHashesRoot, true)) {
             throw new IllegalStateException(String.format(
                     "Failed to clear the correctness hashes result directory at %s.", correctnessHashesRoot));
         }
@@ -188,11 +190,12 @@ public final class TpcdsDataGenerator {
         Stream.of(TpcdsTable.values())
                 .map(table -> {
                     ListenableFuture<?> saveAsParquetTask = dataGeneratorThreadPool.submit(() -> {
-                        parquetCopier.copy(
+                        parquetTransformer.transform(
                                 spark,
                                 schemas.getSchema(table),
                                 paths.tableCsvFile(scale, table),
-                                paths.tableParquetLocation(scale, table));
+                                paths.tableParquetLocation(scale, table),
+                                "|");
                     });
                     saveAsParquetTask.addListener(
                             () -> {
