@@ -84,7 +84,9 @@ public final class TpcdsBenchmark {
     }
 
     public void run() throws IOException {
-        dataGenerator.generateDataIfNecessary();
+        if (config.generateData()) {
+            dataGenerator.generateData();
+        }
         for (int iteration = 0; iteration < config.iterations(); iteration++) {
             log.info(
                     "Beginning benchmark iteration {} of {}.",

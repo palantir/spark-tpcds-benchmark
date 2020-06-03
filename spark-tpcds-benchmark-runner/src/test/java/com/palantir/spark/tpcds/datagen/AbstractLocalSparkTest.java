@@ -16,16 +16,23 @@
 
 package com.palantir.spark.tpcds.datagen;
 
-import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
-import java.nio.file.Paths;
-import org.junit.jupiter.api.Test;
+import com.palantir.spark.tpcds.config.HadoopConfiguration;
+import org.apache.spark.sql.SparkSession;
+import org.junit.jupiter.api.BeforeEach;
 
-public final class GenSortDataGeneratorTest extends AbstractLocalSparkTest {
-    @Test
-    public void testGeneratesData() throws Exception {
-        GenSortDataGenerator genSortDataGenerator =
-                new GenSortDataGenerator(sparkSession, TpcdsBenchmarkConfig.parse(Paths.get("var/conf/config.yml")));
-        // Should not throw.
-        genSortDataGenerator.generate();
+public abstract class AbstractLocalSparkTest {
+    static final HadoopConfiguration TEST_HADOOP_CONFIGURATION =
+            HadoopConfiguration.builder().build();
+
+    SparkSession sparkSession;
+
+    @BeforeEach
+    public void beforeEach() {
+        sparkSession = SparkSession.builder()
+                .appName("tests")
+                .master("local")
+                .config("spark.ui.enabled", false)
+                .config("spark.ui.showConsoleProgress", false)
+                .getOrCreate();
     }
 }

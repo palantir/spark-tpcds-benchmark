@@ -16,16 +16,9 @@
 
 package com.palantir.spark.tpcds.datagen;
 
-import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
-import java.nio.file.Paths;
-import org.junit.jupiter.api.Test;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.StructType;
 
-public final class GenSortDataGeneratorTest extends AbstractLocalSparkTest {
-    @Test
-    public void testGeneratesData() throws Exception {
-        GenSortDataGenerator genSortDataGenerator =
-                new GenSortDataGenerator(sparkSession, TpcdsBenchmarkConfig.parse(Paths.get("var/conf/config.yml")));
-        // Should not throw.
-        genSortDataGenerator.generate();
-    }
+public interface ParquetCopier {
+    void copy(SparkSession sparkSession, StructType schema, String sourcePath, String destinationPath);
 }

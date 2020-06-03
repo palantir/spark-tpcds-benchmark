@@ -16,19 +16,32 @@
 
 package com.palantir.spark.tpcds.util;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.palantir.logsafe.SafeArg;
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class DataGenUtils {
+    private static final Logger log = LoggerFactory.getLogger(DataGenUtils.class);
+
     private DataGenUtils() {}
 
     public static void makeFileExecutable(Path genSortFile) {
@@ -74,5 +87,40 @@ public final class DataGenUtils {
                     "Dsdgen binary was not found in the tarball; was this benchmark runner packaged correctly?");
         }
         return dsdgenFile;
+    }
+
+    public static void uploadFiles(
+            FileSystem destinationFileSystem,
+            org.apache.hadoop.fs.Path rootDestinationPath,
+            File sourceDir,
+            ListeningExecutorService uploaderThreadPool) {
+        Optional.ofNullable(sourceDir.listFiles())
+                .map(Stream::of)
+                .orElseGet(Stream::empty)
+                .map(file -> {
+                    ListenableFuture<?> uploadTask = uploaderThreadPool.submit(() -> {
+                        try {
+                            FileUtil.copy(
+                                    file,
+                                    destinationFileSystem,
+                                    new org.apache.hadoop.fs.Path(rootDestinationPath, file.getName()),
+                                    true,
+                                    destinationFileSystem.getConf());
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                    uploadTask.addListener(
+                            () -> log.info(
+                                    "Finished uploading file to the Hadoop File System.",
+                                    SafeArg.of("localFilePath", file),
+                                    SafeArg.of(
+                                            "destination",
+                                            new org.apache.hadoop.fs.Path(rootDestinationPath, file.getName()))),
+                            uploaderThreadPool);
+                    return uploadTask;
+                })
+                .collect(Collectors.toList())
+                .forEach(MoreFutures::join);
     }
 }

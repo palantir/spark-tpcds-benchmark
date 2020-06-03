@@ -20,7 +20,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.palantir.logsafe.SafeArg;
-import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
 import com.palantir.spark.tpcds.constants.TpcdsTable;
 import com.palantir.spark.tpcds.paths.TpcdsPaths;
 import com.palantir.spark.tpcds.schemas.TpcdsSchemas;
@@ -31,7 +30,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
@@ -39,11 +38,7 @@ import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,34 +50,40 @@ public final class TpcdsDataGenerator {
     private static final String TPCDS_BIN_DIR_NAME = "tpcds-bin";
     private static final String DSDGEN_BINARY_FILE_NAME = "dsdgen";
 
-    private final TpcdsBenchmarkConfig config;
+    private final Path dsdgenWorkLocalDir;
+    private final List<Integer> dataScalesGb;
+    private final boolean shouldOverwriteData;
     private final FileSystem dataFileSystem;
+    private final ParquetCopier parquetCopier;
     private final SparkSession spark;
     private final TpcdsPaths paths;
     private final TpcdsSchemas schemas;
     private final ListeningExecutorService dataGeneratorThreadPool;
 
     public TpcdsDataGenerator(
-            TpcdsBenchmarkConfig config,
+            Path dsdgenWorkLocalDir,
+            List<Integer> dataScalesGb,
+            boolean shouldOverwriteData,
             FileSystem dataFileSystem,
+            ParquetCopier parquetCopier,
             SparkSession spark,
             TpcdsPaths paths,
             TpcdsSchemas schemas,
             ExecutorService dataGeneratorThreadPool) {
-        this.config = config;
+        this.dsdgenWorkLocalDir = dsdgenWorkLocalDir;
+        this.dataScalesGb = dataScalesGb;
+        this.shouldOverwriteData = shouldOverwriteData;
         this.dataFileSystem = dataFileSystem;
+        this.parquetCopier = parquetCopier;
         this.spark = spark;
         this.paths = paths;
         this.schemas = schemas;
         this.dataGeneratorThreadPool = MoreExecutors.listeningDecorator(dataGeneratorThreadPool);
     }
 
-    public void generateDataIfNecessary() throws IOException {
-        if (!config.generateData()) {
-            return;
-        }
+    public void generateData() throws IOException {
         spark.sparkContext().setJobDescription("data-generation");
-        Path tempDir = config.dsdgenWorkLocalDir();
+        Path tempDir = dsdgenWorkLocalDir;
         if (tempDir.toFile().isDirectory()) {
             FileUtils.deleteDirectory(tempDir.toFile());
         }
@@ -92,7 +93,7 @@ public final class TpcdsDataGenerator {
         tempDir.toFile().deleteOnExit();
         try {
             final Path dsdgenFile = extractTpcdsBinary(tempDir);
-            config.dataScalesGb().stream()
+            dataScalesGb.stream()
                     .map(scale -> generateAndUploadDataForScale(scale, tempDir, dsdgenFile))
                     .collect(Collectors.toList()) // Always collect to force kick off all tasks
                     .forEach(TpcdsDataGenerator::waitForFuture);
@@ -116,7 +117,7 @@ public final class TpcdsDataGenerator {
         ListenableFuture<?> uploadDataForScaleTask = dataGeneratorThreadPool.submit(() -> {
             try {
                 org.apache.hadoop.fs.Path rootDataPath = new org.apache.hadoop.fs.Path(paths.tpcdsCsvDir(scale));
-                if (!dataFileSystem.exists(rootDataPath) || config.overwriteData()) {
+                if (!dataFileSystem.exists(rootDataPath) || shouldOverwriteData) {
                     if (dataFileSystem.isDirectory(rootDataPath) && !dataFileSystem.delete(rootDataPath, true)) {
                         throw new IllegalStateException(
                                 String.format("Failed to clear data file directory at %s.", rootDataPath));
@@ -135,17 +136,19 @@ public final class TpcdsDataGenerator {
                     throw new IllegalStateException(
                             String.format("Failed to make tpcds temporary data dir at %s", tpcdsTempDir));
                 }
+                String[] dsdgenCommand = {
+                    resolvedDsdgenFile.toFile().getAbsolutePath(),
+                    "-DIR",
+                    tpcdsTempDir.getAbsolutePath(),
+                    "-SCALE",
+                    Integer.toString(scale),
+                    "-SUFFIX",
+                    ".csv",
+                    "-DELIMITER",
+                    "|"
+                };
                 Process dsdgenProcess = new ProcessBuilder()
-                        .command(
-                                resolvedDsdgenFile.toFile().getAbsolutePath(),
-                                "-DIR",
-                                tpcdsTempDir.getAbsolutePath(),
-                                "-SCALE",
-                                Integer.toString(scale),
-                                "-SUFFIX",
-                                ".csv",
-                                "-DELIMITER",
-                                "|")
+                        .command(dsdgenCommand)
                         .inheritIO()
                         .directory(resolvedDsdgenFile.toFile().getParentFile())
                         .start();
@@ -157,7 +160,7 @@ public final class TpcdsDataGenerator {
                 log.info(
                         "Uploading tpcds data from location {}.",
                         SafeArg.of("localLocation", tpcdsTempDir.getAbsolutePath()));
-                uploadCsvs(rootDataPath, tpcdsTempDir);
+                DataGenUtils.uploadFiles(dataFileSystem, rootDataPath, tpcdsTempDir, dataGeneratorThreadPool);
                 saveTablesAsParquet(scale);
             } catch (InterruptedException | IOException e) {
                 throw new RuntimeException(e);
@@ -174,7 +177,7 @@ public final class TpcdsDataGenerator {
         org.apache.hadoop.fs.Path correctnessHashesRoot =
                 new org.apache.hadoop.fs.Path(paths.experimentCorrectnessHashesRoot(scale));
         if (dataFileSystem.exists(correctnessHashesRoot)
-                && config.overwriteData()
+                && shouldOverwriteData
                 && !dataFileSystem.delete(correctnessHashesRoot, true)) {
             throw new IllegalStateException(String.format(
                     "Failed to clear the correctness hashes result directory at %s.", correctnessHashesRoot));
@@ -185,13 +188,11 @@ public final class TpcdsDataGenerator {
         Stream.of(TpcdsTable.values())
                 .map(table -> {
                     ListenableFuture<?> saveAsParquetTask = dataGeneratorThreadPool.submit(() -> {
-                        StructType schema = schemas.getSchema(table);
-                        Dataset<Row> tableDataset = spark.read()
-                                .format("csv")
-                                .option("delimiter", "|")
-                                .schema(schema)
-                                .load(paths.tableCsvFile(scale, table));
-                        tableDataset.write().format("parquet").save(paths.tableParquetLocation(scale, table));
+                        parquetCopier.copy(
+                                spark,
+                                schemas.getSchema(table),
+                                paths.tableCsvFile(scale, table),
+                                paths.tableParquetLocation(scale, table));
                     });
                     saveAsParquetTask.addListener(
                             () -> {
@@ -202,37 +203,6 @@ public final class TpcdsDataGenerator {
                             },
                             dataGeneratorThreadPool);
                     return saveAsParquetTask;
-                })
-                .collect(Collectors.toList())
-                .forEach(TpcdsDataGenerator::waitForFuture);
-    }
-
-    private void uploadCsvs(org.apache.hadoop.fs.Path rootDataPath, File tpcdsTempDir) {
-        Optional.ofNullable(tpcdsTempDir.listFiles())
-                .map(Stream::of)
-                .orElseGet(Stream::empty)
-                .map(file -> {
-                    ListenableFuture<?> uploadCsvTask = dataGeneratorThreadPool.submit(() -> {
-                        try {
-                            FileUtil.copy(
-                                    file,
-                                    dataFileSystem,
-                                    new org.apache.hadoop.fs.Path(rootDataPath, file.getName()),
-                                    true,
-                                    dataFileSystem.getConf());
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-                    uploadCsvTask.addListener(
-                            () -> log.info(
-                                    "Finished uploading CSV to the Hadoop File System.",
-                                    SafeArg.of("localFilePath", file),
-                                    SafeArg.of(
-                                            "destination",
-                                            new org.apache.hadoop.fs.Path(rootDataPath, file.getName()))),
-                            dataGeneratorThreadPool);
-                    return uploadCsvTask;
                 })
                 .collect(Collectors.toList())
                 .forEach(TpcdsDataGenerator::waitForFuture);

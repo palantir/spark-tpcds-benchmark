@@ -82,4 +82,10 @@ public interface TpcdsBenchmarkConfig {
     static TpcdsBenchmarkConfig parse(Path configFile) throws IOException {
         return MAPPER.readValue(configFile.toFile(), TpcdsBenchmarkConfig.class);
     }
+
+    class Builder extends ImmutableTpcdsBenchmarkConfig.Builder {}
+
+    static Builder builder() {
+        return new Builder();
+    }
 }
