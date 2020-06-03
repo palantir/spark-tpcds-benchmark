@@ -17,6 +17,11 @@
 package com.palantir.spark.tpcds.datagen;
 
 import com.palantir.spark.tpcds.config.HadoopConfiguration;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -34,5 +39,9 @@ public abstract class AbstractLocalSparkTest {
                 .config("spark.ui.enabled", false)
                 .config("spark.ui.showConsoleProgress", false)
                 .getOrCreate();
+    }
+
+    final Path createTemporaryWorkingDir(String prefix) throws IOException {
+        return Files.createDirectory(Paths.get("/tmp", prefix + "_" + UUID.randomUUID()));
     }
 }

@@ -27,7 +27,6 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.UUID;
 import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.jupiter.api.Test;
@@ -35,20 +34,22 @@ import org.junit.jupiter.api.Test;
 public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkTest {
     @Test
     public void testGeneratesAndUploadsData() throws Exception {
-        Path destinationDataDirectory = Files.createDirectory(Paths.get("/tmp", "data_" + UUID.randomUUID()));
+        Path workingDir = createTemporaryWorkingDir("working_dir");
+        Path destinationDataDirectory = createTemporaryWorkingDir("data");
 
-        FileSystem dataFileSystem = FileSystem.get(
-                URI.create("file://" + destinationDataDirectory.toFile().getAbsolutePath()),
-                TEST_HADOOP_CONFIGURATION.toHadoopConf());
-        Path workingDir = Files.createDirectory(Paths.get("/tmp", "working_dir_" + UUID.randomUUID()));
+        String fullyQualifiedDestinationDir =
+                "file://" + destinationDataDirectory.toFile().getAbsolutePath();
+        FileSystem dataFileSystem =
+                FileSystem.get(URI.create(fullyQualifiedDestinationDir), TEST_HADOOP_CONFIGURATION.toHadoopConf());
+
         TpcdsDataGenerator generator = new TpcdsDataGenerator(
                 workingDir,
                 ImmutableList.of(1),
                 false,
                 dataFileSystem,
-                mock(ParquetCopier.class), // no need to test spark read and write.
+                mock(ParquetTransformer.class), // no need to test spark read and write.
                 sparkSession,
-                new TpcdsPaths("file://" + destinationDataDirectory.toFile().getAbsolutePath()),
+                new TpcdsPaths(fullyQualifiedDestinationDir),
                 new TpcdsSchemas(),
                 MoreExecutors.newDirectExecutorService());
         generator.generateData();

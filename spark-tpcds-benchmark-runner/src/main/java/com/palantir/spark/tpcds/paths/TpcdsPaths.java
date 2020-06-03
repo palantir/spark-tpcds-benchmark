@@ -32,6 +32,10 @@ public final class TpcdsPaths {
         return String.join(File.separator, testDataDir, "tpcds_data", String.format("scale=%d", scale));
     }
 
+    public String rootGensortDataDir() {
+        return String.join(File.separator, testDataDir, "gensort_data");
+    }
+
     public String tableCsvFile(int scale, TpcdsTable table) {
         return String.join(File.separator, tpcdsCsvDir(scale), String.format("%s.csv", table));
     }
@@ -46,6 +50,14 @@ public final class TpcdsPaths {
 
     public String tpcdsParquetDir(int scale) {
         return String.join(File.separator, rootTpcdsDataDir(scale), "raw_parquet");
+    }
+
+    public String gensortCsvDir() {
+        return String.join(File.separator, rootGensortDataDir(), "raw_csv");
+    }
+
+    public String gensortParquetDir() {
+        return String.join(File.separator, rootGensortDataDir(), "raw_parquet");
     }
 
     public String experimentResultLocation(int scale, String queryName) {

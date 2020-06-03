@@ -91,7 +91,7 @@ public final class DataGenUtils {
 
     public static void uploadFiles(
             FileSystem destinationFileSystem,
-            org.apache.hadoop.fs.Path rootDestinationPath,
+            String rootDestinationPath,
             File sourceDir,
             ListeningExecutorService uploaderThreadPool) {
         Optional.ofNullable(sourceDir.listFiles())
@@ -112,7 +112,7 @@ public final class DataGenUtils {
                     });
                     uploadTask.addListener(
                             () -> log.info(
-                                    "Finished uploading file to the Hadoop File System.",
+                                    "Finished uploading file to the Hadoop File System: {}, {}",
                                     SafeArg.of("localFilePath", file),
                                     SafeArg.of(
                                             "destination",

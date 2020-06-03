@@ -16,9 +16,21 @@
 
 package com.palantir.spark.tpcds.datagen;
 
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 
-public interface ParquetCopier {
-    void copy(SparkSession sparkSession, StructType schema, String sourcePath, String destinationPath);
+public final class DefaultParquetTransformer implements ParquetTransformer {
+    @Override
+    public void transform(
+            SparkSession sparkSession, StructType schema, String sourcePath, String destinationPath, String delimiter) {
+        Dataset<Row> tableDataset = sparkSession
+                .read()
+                .format("csv")
+                .option("delimiter", delimiter)
+                .schema(schema)
+                .load(sourcePath);
+        tableDataset.write().format("parquet").save(destinationPath);
+    }
 }
