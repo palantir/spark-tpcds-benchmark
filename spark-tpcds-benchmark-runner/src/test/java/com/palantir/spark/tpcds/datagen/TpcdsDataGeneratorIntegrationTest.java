@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.jupiter.api.Test;
 
@@ -51,10 +52,10 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
                 new TpcdsSchemas(),
                 MoreExecutors.newDirectExecutorService());
         generator.generateData();
-        long numGeneratedCsvFiles = Files.list(
+        try (Stream<Path> generatedCsvFiles = Files.list(
                         Paths.get(destinationDataDirectory.toString(), "tpcds_data", "scale=1", "raw_csv"))
-                .filter(path -> path.toString().endsWith(".csv"))
-                .count();
-        assertThat(numGeneratedCsvFiles).isEqualTo(25);
+                .filter(path -> path.toString().endsWith(".csv"))) {
+            assertThat(generatedCsvFiles.count()).isEqualTo(25);
+        }
     }
 }
