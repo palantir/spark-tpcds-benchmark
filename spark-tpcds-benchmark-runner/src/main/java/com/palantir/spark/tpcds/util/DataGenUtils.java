@@ -112,7 +112,7 @@ public final class DataGenUtils {
                     });
                     uploadTask.addListener(
                             () -> log.info(
-                                    "Finished uploading file to the Hadoop File System.",
+                                    "Finished uploading file to the Hadoop File System: {}, {}",
                                     SafeArg.of("localFilePath", file),
                                     SafeArg.of(
                                             "destination",
