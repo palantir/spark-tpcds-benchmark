@@ -45,7 +45,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
 
     private static final String GENSORT_BIN_DIR_NAME = "bin";
     private static final String GENSORT_DATA_DIR_NAME = "data";
-    private static final String GENERATED_DATA_FILE_NAME = "gensort_data";
+    private static final String GENERATED_DATA_FILE_NAME = "gensort_data.csv";
 
     // TODO(rahij): run with actual scale and estimate num records.
     private static final int SCALE = 1;

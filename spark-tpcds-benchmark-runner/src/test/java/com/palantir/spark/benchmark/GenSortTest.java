@@ -37,6 +37,7 @@ public final class GenSortTest extends AbstractLocalSparkTest {
     public void testGeneratesData() throws Exception {
         Path workingDir = createTemporaryWorkingDir("working_dir");
         Path destinationDataDirectory = createTemporaryWorkingDir("data");
+        int scale = 1;
 
         String fullyQualifiedDestinationDir =
                 "file://" + destinationDataDirectory.toFile().getAbsolutePath();
@@ -54,18 +55,15 @@ public final class GenSortTest extends AbstractLocalSparkTest {
                 100);
         genSortDataGenerator.generate();
 
-        List<String> generatedLines = read(
-                Paths.get(destinationDataDirectory.toString(), "gensort_data", "raw_csv", "gensort_data_file"), "csv");
+        List<String> generatedLines = read(Paths.get(paths.tableCsvFile(scale, "gensort_data")), "csv");
         assertThat(generatedLines).hasSize(100);
 
-        List<String> copiedParquet = read(
-                Paths.get(destinationDataDirectory.toString(), "gensort_data", "raw_parquet", "gensort_data_file"),
-                "parquet");
+        List<String> copiedParquet = read(Paths.get(paths.tableParquetLocation(scale, "gensort_data")), "parquet");
         assertThat(copiedParquet).hasSameElementsAs(generatedLines);
 
         SortBenchmarkQuery query = new SortBenchmarkQuery(sparkSession);
         // Should not throw. We can't assert sortedness since the data could be saved in multiple partitions.
-        query.save(paths.experimentResultLocation(1, "gensort"));
+        query.save(paths.experimentResultLocation(scale, "gensort"));
     }
 
     private List<String> read(Path path, String format) {

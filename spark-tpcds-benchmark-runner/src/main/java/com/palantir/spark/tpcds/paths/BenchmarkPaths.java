@@ -33,7 +33,11 @@ public final class BenchmarkPaths {
     }
 
     public String tableCsvFile(int scale, TpcdsTable table) {
-        return String.join(File.separator, csvDir(scale), String.format("%s.csv", table));
+        return tableCsvFile(scale, table.tableName());
+    }
+
+    public String tableCsvFile(int scale, String tableName) {
+        return String.join(File.separator, csvDir(scale), String.format("%s.csv", tableName));
     }
 
     public String tableParquetLocation(int scale, TpcdsTable table) {
