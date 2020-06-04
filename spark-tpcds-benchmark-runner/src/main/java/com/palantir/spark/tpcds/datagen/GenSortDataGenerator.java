@@ -116,7 +116,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                     Paths.get(paths.parquetDir(SCALE), GENERATED_DATA_FILE_NAME).toString();
             parquetTransformer.transform(
                     spark, schema, paths.tableCsvFile(SCALE, GENERATED_DATA_FILE_NAME), destinationPath, "\n");
-            registration.registerTable(destinationPath, schema, "gensort_data");
+            registration.registerTable("gensort_data", schema, SCALE);
         } finally {
             try {
                 FileUtils.deleteDirectory(tempWorkingDir.toFile());

@@ -40,28 +40,24 @@ public final class TableRegistration {
         this.schemas = schemas;
     }
 
-    public void registerTable(String path, StructType schema, String tableName) {
-        spark.read().format("parquet").schema(schema).load(path).createOrReplaceTempView(tableName);
-    }
-
     public void registerTables(int scale) {
         Stream.of(TpcdsTable.values()).forEach(table -> {
-            try {
-                String tableLocation = paths.tableParquetLocation(scale, table);
-                Path tablePath = new Path(tableLocation);
-                if (!dataFileSystem.isDirectory(tablePath)) {
-                    throw new IllegalArgumentException(String.format(
-                            "Table %s not found in Parquet format at %s; was the data generated accordingly?",
-                            table, tableLocation));
-                }
-                spark.read()
-                        .format("parquet")
-                        .schema(schemas.getSchema(table))
-                        .load(paths.tableParquetLocation(scale, table))
-                        .createOrReplaceTempView(table.tableName());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            registerTable(table.tableName(), schemas.getSchema(table), scale);
         });
+    }
+
+    public void registerTable(String tableName, StructType schema, int scale) {
+        String tableLocation = paths.tableParquetLocation(scale, tableName);
+        Path tablePath = new Path(tableLocation);
+        try {
+            if (!dataFileSystem.isDirectory(tablePath)) {
+                throw new IllegalArgumentException(String.format(
+                        "Table %s not found in Parquet format at %s; was the data generated accordingly?",
+                        tableName, tableLocation));
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        spark.read().format("parquet").schema(schema).load(tableLocation).createOrReplaceTempView(tableName);
     }
 }
