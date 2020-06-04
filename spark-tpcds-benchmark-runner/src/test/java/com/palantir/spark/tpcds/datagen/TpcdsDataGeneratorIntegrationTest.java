@@ -17,7 +17,6 @@
 package com.palantir.spark.tpcds.datagen;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -47,7 +46,7 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
                 ImmutableList.of(1),
                 false,
                 dataFileSystem,
-                mock(ParquetTransformer.class), // no need to test spark read and write.
+                new DefaultParquetTransformer(),
                 sparkSession,
                 new TpcdsPaths(fullyQualifiedDestinationDir),
                 new TpcdsSchemas(),
