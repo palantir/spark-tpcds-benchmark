@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.StructType;
 
 public final class TpcdsTableRegistration {
 
@@ -38,6 +39,10 @@ public final class TpcdsTableRegistration {
         this.dataFileSystem = dataFileSystem;
         this.spark = spark;
         this.schemas = schemas;
+    }
+
+    public void registerTable(String path, StructType schema, String tableName) {
+        spark.read().format("parquet").schema(schema).load(path).createOrReplaceTempView(tableName);
     }
 
     public void registerTables(int scale) {
