@@ -17,10 +17,11 @@
 package com.palantir.spark.benchmark;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.palantir.spark.tpcds.datagen.DefaultParquetTransformer;
+import com.palantir.spark.tpcds.datagen.ParquetTransformer;
 import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
 import com.palantir.spark.tpcds.paths.BenchmarkPaths;
 import com.palantir.spark.tpcds.schemas.Schemas;
@@ -44,13 +45,14 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
                 FileSystem.get(URI.create(fullyQualifiedDestinationDir), TEST_HADOOP_CONFIGURATION.toHadoopConf());
         int scale = 1;
 
-        BenchmarkPaths paths = new BenchmarkPaths(fullyQualifiedDestinationDir);
+        BenchmarkPaths paths =
+                new BenchmarkPaths(destinationDataDirectory.toFile().getAbsolutePath());
         TpcdsDataGenerator generator = new TpcdsDataGenerator(
                 workingDir,
                 ImmutableList.of(scale),
                 false,
                 dataFileSystem,
-                new DefaultParquetTransformer(),
+                mock(ParquetTransformer.class),
                 sparkSession,
                 paths,
                 new Schemas(),
