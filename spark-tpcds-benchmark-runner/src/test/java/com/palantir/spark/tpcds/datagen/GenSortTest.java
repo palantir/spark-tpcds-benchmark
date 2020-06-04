@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.jupiter.api.Test;
 
-public final class GenSortDataGeneratorTest extends AbstractLocalSparkTest {
+public final class GenSortTest extends AbstractLocalSparkTest {
     @Test
     public void testGeneratesData() throws Exception {
         Path workingDir = createTemporaryWorkingDir("working_dir");
@@ -62,6 +62,7 @@ public final class GenSortDataGeneratorTest extends AbstractLocalSparkTest {
         assertThat(copiedParquet).hasSameElementsAs(generatedLines);
 
         SortBenchmarkQuery query = new SortBenchmarkQuery(sparkSession);
+        // Should not throw. We can't assert sortedness since the data could be saved in multiple partitions.
         query.save(paths.experimentResultLocation(1, "gensort"));
     }
 
