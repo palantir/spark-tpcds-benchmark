@@ -45,7 +45,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
 
     private static final String GENSORT_BIN_DIR_NAME = "bin";
     private static final String GENSORT_DATA_DIR_NAME = "data";
-    private static final String GENERATED_DATA_FILE_NAME = "gensort_data.csv";
+    private static final String GENERATED_DATA_FILE_NAME = "gensort_data";
 
     // TODO(rahij): run with actual scale and estimate num records.
     private static final int SCALE = 1;
@@ -94,7 +94,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                             genSortFilePath.toFile().getAbsolutePath(),
                             "-a",
                             Long.toString(numRecords),
-                            dataDir.resolve(GENERATED_DATA_FILE_NAME)
+                            dataDir.resolve(GENERATED_DATA_FILE_NAME + ".csv")
                                     .toAbsolutePath()
                                     .toString())
                     .inheritIO()
@@ -115,7 +115,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             String destinationPath =
                     Paths.get(paths.parquetDir(SCALE), GENERATED_DATA_FILE_NAME).toString();
             parquetTransformer.transform(
-                    spark, schema, paths.tableParquetLocation(SCALE, GENERATED_DATA_FILE_NAME), destinationPath, "\n");
+                    spark, schema, paths.tableCsvFile(SCALE, GENERATED_DATA_FILE_NAME), destinationPath, "\n");
             registration.registerTable(destinationPath, schema, "gensort_data");
         } finally {
             try {
