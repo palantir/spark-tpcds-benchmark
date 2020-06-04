@@ -19,7 +19,7 @@ package com.palantir.spark.tpcds.correctness;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import com.google.common.io.ByteStreams;
-import com.palantir.spark.tpcds.paths.TpcdsPaths;
+import com.palantir.spark.tpcds.paths.BenchmarkPaths;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -44,11 +44,11 @@ public final class TpcdsQueryCorrectnessChecks {
 
     private static final Logger log = LoggerFactory.getLogger(TpcdsQueryCorrectnessChecks.class);
 
-    private final TpcdsPaths paths;
+    private final BenchmarkPaths paths;
     private final FileSystem dataFileSystem;
     private final SparkSession spark;
 
-    public TpcdsQueryCorrectnessChecks(TpcdsPaths paths, FileSystem dataFileSystem, SparkSession spark) {
+    public TpcdsQueryCorrectnessChecks(BenchmarkPaths paths, FileSystem dataFileSystem, SparkSession spark) {
         this.paths = paths;
         this.dataFileSystem = dataFileSystem;
         this.spark = spark;

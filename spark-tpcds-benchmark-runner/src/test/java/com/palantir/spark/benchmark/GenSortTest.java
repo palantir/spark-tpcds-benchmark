@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package com.palantir.spark.tpcds.datagen;
+package com.palantir.spark.benchmark;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.palantir.spark.tpcds.paths.TpcdsPaths;
+import com.palantir.spark.tpcds.datagen.DefaultParquetTransformer;
+import com.palantir.spark.tpcds.datagen.GenSortDataGenerator;
+import com.palantir.spark.tpcds.paths.BenchmarkPaths;
 import com.palantir.spark.tpcds.queries.SortBenchmarkQuery;
-import com.palantir.spark.tpcds.registration.TpcdsTableRegistration;
-import com.palantir.spark.tpcds.schemas.TpcdsSchemas;
+import com.palantir.spark.tpcds.registration.TableRegistration;
+import com.palantir.spark.tpcds.schemas.Schemas;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -41,13 +43,13 @@ public final class GenSortTest extends AbstractLocalSparkTest {
         FileSystem dataFileSystem =
                 FileSystem.get(URI.create(fullyQualifiedDestinationDir), TEST_HADOOP_CONFIGURATION.toHadoopConf());
 
-        TpcdsPaths paths = new TpcdsPaths(fullyQualifiedDestinationDir);
+        BenchmarkPaths paths = new BenchmarkPaths(fullyQualifiedDestinationDir);
         GenSortDataGenerator genSortDataGenerator = new GenSortDataGenerator(
                 sparkSession,
                 dataFileSystem,
                 new DefaultParquetTransformer(), // test that our schema works by copying for real.
                 paths,
-                new TpcdsTableRegistration(paths, dataFileSystem, sparkSession, new TpcdsSchemas()),
+                new TableRegistration(paths, dataFileSystem, sparkSession, new Schemas()),
                 workingDir,
                 100);
         genSortDataGenerator.generate();

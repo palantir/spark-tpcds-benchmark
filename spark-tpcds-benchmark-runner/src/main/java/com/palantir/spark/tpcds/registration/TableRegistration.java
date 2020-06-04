@@ -17,8 +17,8 @@
 package com.palantir.spark.tpcds.registration;
 
 import com.palantir.spark.tpcds.constants.TpcdsTable;
-import com.palantir.spark.tpcds.paths.TpcdsPaths;
-import com.palantir.spark.tpcds.schemas.TpcdsSchemas;
+import com.palantir.spark.tpcds.paths.BenchmarkPaths;
+import com.palantir.spark.tpcds.schemas.Schemas;
 import java.io.IOException;
 import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
@@ -26,15 +26,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 
-public final class TpcdsTableRegistration {
+public final class TableRegistration {
 
-    private final TpcdsPaths paths;
+    private final BenchmarkPaths paths;
     private final FileSystem dataFileSystem;
     private final SparkSession spark;
-    private final TpcdsSchemas schemas;
+    private final Schemas schemas;
 
-    public TpcdsTableRegistration(
-            TpcdsPaths paths, FileSystem dataFileSystem, SparkSession spark, TpcdsSchemas schemas) {
+    public TableRegistration(BenchmarkPaths paths, FileSystem dataFileSystem, SparkSession spark, Schemas schemas) {
         this.paths = paths;
         this.dataFileSystem = dataFileSystem;
         this.spark = spark;

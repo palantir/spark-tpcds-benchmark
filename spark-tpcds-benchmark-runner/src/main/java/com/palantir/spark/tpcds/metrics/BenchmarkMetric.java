@@ -32,7 +32,7 @@ import scala.collection.JavaConverters;
 
 @Value.Immutable
 @ImmutablesStyle
-public abstract class TpcdsBenchmarkMetric implements Serializable {
+public abstract class BenchmarkMetric implements Serializable {
 
     public static final StructType SPARK_SCHEMA = schema();
 
@@ -98,5 +98,5 @@ public abstract class TpcdsBenchmarkMetric implements Serializable {
         return new Builder();
     }
 
-    public static final class Builder extends ImmutableTpcdsBenchmarkMetric.Builder {}
+    public static final class Builder extends ImmutableBenchmarkMetric.Builder {}
 }

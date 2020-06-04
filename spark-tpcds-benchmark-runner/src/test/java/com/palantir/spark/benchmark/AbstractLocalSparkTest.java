@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.palantir.spark.tpcds.datagen;
+package com.palantir.spark.benchmark;
 
 import com.palantir.spark.tpcds.config.HadoopConfiguration;
 import java.io.IOException;

@@ -17,14 +17,14 @@
 package com.palantir.spark.tpcds;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
+import com.palantir.spark.tpcds.config.BenchmarkConfig;
 import com.palantir.spark.tpcds.correctness.TpcdsQueryCorrectnessChecks;
 import com.palantir.spark.tpcds.datagen.DefaultParquetTransformer;
 import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
-import com.palantir.spark.tpcds.metrics.TpcdsBenchmarkMetrics;
-import com.palantir.spark.tpcds.paths.TpcdsPaths;
-import com.palantir.spark.tpcds.registration.TpcdsTableRegistration;
-import com.palantir.spark.tpcds.schemas.TpcdsSchemas;
+import com.palantir.spark.tpcds.metrics.BenchmarkMetrics;
+import com.palantir.spark.tpcds.paths.BenchmarkPaths;
+import com.palantir.spark.tpcds.registration.TableRegistration;
+import com.palantir.spark.tpcds.schemas.Schemas;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
@@ -35,11 +35,11 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 
 /** The main entry point for the application. */
-public final class TpcdsBenchmarkRunner {
+public final class BenchmarkRunner {
 
     private static final Path DEFAULT_CONFIG_FILE = Paths.get("var", "conf", "config.yml");
 
-    private TpcdsBenchmarkRunner() {}
+    private BenchmarkRunner() {}
 
     public static void main(String[] args) throws Exception {
         Path configFile;
@@ -48,7 +48,7 @@ public final class TpcdsBenchmarkRunner {
         } else {
             configFile = Paths.get(args[0]);
         }
-        TpcdsBenchmarkConfig config = TpcdsBenchmarkConfig.parse(configFile);
+        BenchmarkConfig config = BenchmarkConfig.parse(configFile);
         Configuration hadoopConf = config.hadoop().toHadoopConf();
         try (FileSystem dataFileSystem =
                 FileSystem.get(new org.apache.hadoop.fs.Path(config.testDataDir()).toUri(), hadoopConf)) {
@@ -68,9 +68,9 @@ public final class TpcdsBenchmarkRunner {
             }
 
             SparkSession spark = SparkSession.builder().config(sparkConf).getOrCreate();
-            TpcdsPaths paths = new TpcdsPaths(config.testDataDir());
-            TpcdsSchemas schemas = new TpcdsSchemas();
-            TpcdsTableRegistration registration = new TpcdsTableRegistration(paths, dataFileSystem, spark, schemas);
+            BenchmarkPaths paths = new BenchmarkPaths(config.testDataDir());
+            Schemas schemas = new Schemas();
+            TableRegistration registration = new TableRegistration(paths, dataFileSystem, spark, schemas);
             ExecutorService dataGeneratorThreadPool = Executors.newFixedThreadPool(
                     config.dataGenerationParallelism(),
                     new ThreadFactoryBuilder()
@@ -88,8 +88,8 @@ public final class TpcdsBenchmarkRunner {
                     schemas,
                     dataGeneratorThreadPool);
             TpcdsQueryCorrectnessChecks correctness = new TpcdsQueryCorrectnessChecks(paths, dataFileSystem, spark);
-            TpcdsBenchmarkMetrics metrics = new TpcdsBenchmarkMetrics(config, paths, spark);
-            new TpcdsBenchmark(config, dataGenerator, registration, paths, correctness, metrics, spark, dataFileSystem)
+            BenchmarkMetrics metrics = new BenchmarkMetrics(config, paths, spark);
+            new Benchmark(config, dataGenerator, registration, paths, correctness, metrics, spark, dataFileSystem)
                     .run();
         }
     }

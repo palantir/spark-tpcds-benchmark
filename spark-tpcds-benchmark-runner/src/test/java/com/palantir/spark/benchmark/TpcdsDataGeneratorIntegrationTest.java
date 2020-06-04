@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package com.palantir.spark.tpcds.datagen;
+package com.palantir.spark.benchmark;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.palantir.spark.tpcds.paths.TpcdsPaths;
-import com.palantir.spark.tpcds.schemas.TpcdsSchemas;
+import com.palantir.spark.tpcds.datagen.DefaultParquetTransformer;
+import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
+import com.palantir.spark.tpcds.paths.BenchmarkPaths;
+import com.palantir.spark.tpcds.schemas.Schemas;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,8 +50,8 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
                 dataFileSystem,
                 new DefaultParquetTransformer(),
                 sparkSession,
-                new TpcdsPaths(fullyQualifiedDestinationDir),
-                new TpcdsSchemas(),
+                new BenchmarkPaths(fullyQualifiedDestinationDir),
+                new Schemas(),
                 MoreExecutors.newDirectExecutorService());
         generator.generateData();
         try (Stream<Path> generatedCsvFiles = Files.list(

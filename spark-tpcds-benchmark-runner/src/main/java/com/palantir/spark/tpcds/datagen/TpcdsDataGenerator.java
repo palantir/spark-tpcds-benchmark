@@ -21,8 +21,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.palantir.logsafe.SafeArg;
 import com.palantir.spark.tpcds.constants.TpcdsTable;
-import com.palantir.spark.tpcds.paths.TpcdsPaths;
-import com.palantir.spark.tpcds.schemas.TpcdsSchemas;
+import com.palantir.spark.tpcds.paths.BenchmarkPaths;
+import com.palantir.spark.tpcds.schemas.Schemas;
 import com.palantir.spark.tpcds.util.DataGenUtils;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -56,8 +56,8 @@ public final class TpcdsDataGenerator {
     private final FileSystem destinationFileSystem;
     private final ParquetTransformer parquetTransformer;
     private final SparkSession spark;
-    private final TpcdsPaths paths;
-    private final TpcdsSchemas schemas;
+    private final BenchmarkPaths paths;
+    private final Schemas schemas;
     private final ListeningExecutorService dataGeneratorThreadPool;
 
     public TpcdsDataGenerator(
@@ -67,8 +67,8 @@ public final class TpcdsDataGenerator {
             FileSystem destinationFileSystem,
             ParquetTransformer parquetTransformer,
             SparkSession spark,
-            TpcdsPaths paths,
-            TpcdsSchemas schemas,
+            BenchmarkPaths paths,
+            Schemas schemas,
             ExecutorService dataGeneratorThreadPool) {
         this.dsdgenWorkLocalDir = dsdgenWorkLocalDir;
         this.dataScalesGb = dataScalesGb;
@@ -116,7 +116,7 @@ public final class TpcdsDataGenerator {
     private ListenableFuture<?> generateAndUploadDataForScale(int scale, Path tempDir, Path resolvedDsdgenFile) {
         ListenableFuture<?> uploadDataForScaleTask = dataGeneratorThreadPool.submit(() -> {
             try {
-                org.apache.hadoop.fs.Path rootDataPath = new org.apache.hadoop.fs.Path(paths.tpcdsCsvDir(scale));
+                org.apache.hadoop.fs.Path rootDataPath = new org.apache.hadoop.fs.Path(paths.csvDir(scale));
                 if (!destinationFileSystem.exists(rootDataPath) || shouldOverwriteData) {
                     if (destinationFileSystem.isDirectory(rootDataPath)
                             && !destinationFileSystem.delete(rootDataPath, true)) {

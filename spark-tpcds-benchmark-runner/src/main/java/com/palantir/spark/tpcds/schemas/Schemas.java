@@ -39,11 +39,11 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
-public final class TpcdsSchemas {
+public final class Schemas {
     private static final Pattern DECIMAL_PATTERN = Pattern.compile("decimal\\((\\d+),(\\d+)\\)");
 
     private final Map<TpcdsTable, StructType> schemas = new ConcurrentHashMap<>();
-    private final Supplier<String> cachedSqlSchemaDefinition = Suppliers.memoize(TpcdsSchemas::getSqlSchemaDefinition);
+    private final Supplier<String> cachedSqlSchemaDefinition = Suppliers.memoize(Schemas::getSqlSchemaDefinition);
 
     public StructType getSchema(TpcdsTable table) {
         return schemas.computeIfAbsent(table, this::doGetSchema);
