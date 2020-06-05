@@ -18,9 +18,9 @@ package com.palantir.spark.tpcds.metrics;
 
 import com.google.common.base.Stopwatch;
 import com.palantir.logsafe.Preconditions;
-import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
+import com.palantir.spark.tpcds.config.BenchmarkConfig;
 import com.palantir.spark.tpcds.immutables.ImmutablesStyle;
-import com.palantir.spark.tpcds.paths.TpcdsPaths;
+import com.palantir.spark.tpcds.paths.BenchmarkPaths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -31,15 +31,15 @@ import org.apache.spark.util.Utils;
 import org.immutables.value.Value;
 import scala.collection.JavaConverters;
 
-public final class TpcdsBenchmarkMetrics {
+public final class BenchmarkMetrics {
 
-    private final TpcdsBenchmarkConfig config;
+    private final BenchmarkConfig config;
     private final List<Row> metrics = new ArrayList<>();
-    private final TpcdsPaths paths;
+    private final BenchmarkPaths paths;
     private final SparkSession spark;
     private RunningQuery currentRunningQuery;
 
-    public TpcdsBenchmarkMetrics(TpcdsBenchmarkConfig config, TpcdsPaths paths, SparkSession spark) {
+    public BenchmarkMetrics(BenchmarkConfig config, BenchmarkPaths paths, SparkSession spark) {
         this.config = config;
         this.paths = paths;
         this.spark = spark;
@@ -61,7 +61,7 @@ public final class TpcdsBenchmarkMetrics {
         long endTime = System.currentTimeMillis();
         long elapsed = stopped.elapsed(TimeUnit.MILLISECONDS);
         long startTime = endTime - elapsed;
-        metrics.add(TpcdsBenchmarkMetric.builder()
+        metrics.add(BenchmarkMetric.builder()
                 .queryName(currentRunningQuery.queryName())
                 .scale(currentRunningQuery.scale())
                 .sparkVersion(spark.version())
@@ -87,7 +87,7 @@ public final class TpcdsBenchmarkMetrics {
     }
 
     public void flushMetrics() {
-        spark.createDataFrame(metrics, TpcdsBenchmarkMetric.SPARK_SCHEMA)
+        spark.createDataFrame(metrics, BenchmarkMetric.SPARK_SCHEMA)
                 .write()
                 .mode(SaveMode.Append)
                 .format("json")

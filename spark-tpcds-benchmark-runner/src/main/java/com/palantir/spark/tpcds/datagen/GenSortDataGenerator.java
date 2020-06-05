@@ -19,8 +19,8 @@ package com.palantir.spark.tpcds.datagen;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.palantir.logsafe.SafeArg;
-import com.palantir.spark.tpcds.paths.TpcdsPaths;
-import com.palantir.spark.tpcds.registration.TpcdsTableRegistration;
+import com.palantir.spark.tpcds.paths.BenchmarkPaths;
+import com.palantir.spark.tpcds.registration.TableRegistration;
 import com.palantir.spark.tpcds.util.DataGenUtils;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -45,13 +45,16 @@ public final class GenSortDataGenerator implements SortDataGenerator {
 
     private static final String GENSORT_BIN_DIR_NAME = "bin";
     private static final String GENSORT_DATA_DIR_NAME = "data";
-    private static final String GENERATED_DATA_FILE_NAME = "gensort_data_file";
+    private static final String GENERATED_DATA_FILE_NAME = "gensort_data";
+
+    // TODO(rahij): run with actual scale and estimate num records.
+    private static final int SCALE = 1;
 
     private final SparkSession spark;
     private final FileSystem destinationFileSystem;
     private final ParquetTransformer parquetTransformer;
-    private final TpcdsPaths paths;
-    private final TpcdsTableRegistration registration;
+    private final BenchmarkPaths paths;
+    private final TableRegistration registration;
     private final Path tempWorkingDir;
     private final long numRecords;
 
@@ -59,8 +62,8 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             SparkSession spark,
             FileSystem destinationFileSystem,
             ParquetTransformer parquetTransformer,
-            TpcdsPaths paths,
-            TpcdsTableRegistration registration,
+            BenchmarkPaths paths,
+            TableRegistration registration,
             Path tempWorkingDir,
             long numRecords) {
         this.spark = spark;
@@ -91,7 +94,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                             genSortFilePath.toFile().getAbsolutePath(),
                             "-a",
                             Long.toString(numRecords),
-                            dataDir.resolve(GENERATED_DATA_FILE_NAME)
+                            dataDir.resolve(GENERATED_DATA_FILE_NAME + ".csv")
                                     .toAbsolutePath()
                                     .toString())
                     .inheritIO()
@@ -104,20 +107,16 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             log.info("Finished running gensort");
             DataGenUtils.uploadFiles(
                     destinationFileSystem,
-                    paths.gensortCsvDir(),
+                    paths.csvDir(SCALE),
                     dataDir.toFile(),
                     MoreExecutors.newDirectExecutorService());
             StructType schema = DataTypes.createStructType(
                     ImmutableList.of(DataTypes.createStructField("record", DataTypes.StringType, false)));
-            String destinationPath = Paths.get(paths.gensortParquetDir(), GENERATED_DATA_FILE_NAME)
-                    .toString();
+            String destinationPath =
+                    Paths.get(paths.parquetDir(SCALE), GENERATED_DATA_FILE_NAME).toString();
             parquetTransformer.transform(
-                    spark,
-                    schema,
-                    Paths.get(paths.gensortCsvDir(), GENERATED_DATA_FILE_NAME).toString(),
-                    destinationPath,
-                    "\n");
-            registration.registerTable(destinationPath, schema, "gensort_data");
+                    spark, schema, paths.tableCsvFile(SCALE, GENERATED_DATA_FILE_NAME), destinationPath, "\n");
+            registration.registerTable("gensort_data", schema, SCALE);
         } finally {
             try {
                 FileUtils.deleteDirectory(tempWorkingDir.toFile());

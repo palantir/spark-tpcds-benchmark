@@ -20,53 +20,48 @@ import com.palantir.spark.tpcds.constants.TpcdsTable;
 import java.io.File;
 import org.apache.commons.lang3.StringUtils;
 
-public final class TpcdsPaths {
+public final class BenchmarkPaths {
 
     private final String testDataDir;
 
-    public TpcdsPaths(String testDataDir) {
+    public BenchmarkPaths(String testDataDir) {
         this.testDataDir = testDataDir;
     }
 
-    public String rootTpcdsDataDir(int scale) {
-        return String.join(File.separator, testDataDir, "tpcds_data", String.format("scale=%d", scale));
-    }
-
-    public String rootGensortDataDir() {
-        return String.join(File.separator, testDataDir, "gensort_data");
+    public String rootDataDir(int scale) {
+        return String.join(File.separator, testDataDir, "benchmark_data", String.format("scale=%d", scale));
     }
 
     public String tableCsvFile(int scale, TpcdsTable table) {
-        return String.join(File.separator, tpcdsCsvDir(scale), String.format("%s.csv", table));
+        return tableCsvFile(scale, table.tableName());
+    }
+
+    public String tableCsvFile(int scale, String tableName) {
+        return String.join(File.separator, csvDir(scale), String.format("%s.csv", tableName));
     }
 
     public String tableParquetLocation(int scale, TpcdsTable table) {
-        return String.join(File.separator, tpcdsParquetDir(scale), table.tableName());
+        return tableParquetLocation(scale, table.tableName());
     }
 
-    public String tpcdsCsvDir(int scale) {
-        return String.join(File.separator, rootTpcdsDataDir(scale), "raw_csv");
+    public String tableParquetLocation(int scale, String tableName) {
+        return String.join(File.separator, parquetDir(scale), tableName);
     }
 
-    public String tpcdsParquetDir(int scale) {
-        return String.join(File.separator, rootTpcdsDataDir(scale), "raw_parquet");
+    public String csvDir(int scale) {
+        return String.join(File.separator, rootDataDir(scale), "raw_csv");
     }
 
-    public String gensortCsvDir() {
-        return String.join(File.separator, rootGensortDataDir(), "raw_csv");
-    }
-
-    public String gensortParquetDir() {
-        return String.join(File.separator, rootGensortDataDir(), "raw_parquet");
+    public String parquetDir(int scale) {
+        return String.join(File.separator, rootDataDir(scale), "raw_parquet");
     }
 
     public String experimentResultLocation(int scale, String queryName) {
-        return String.join(
-                File.separator, rootTpcdsDataDir(scale), "experiments", StringUtils.removeEnd(queryName, ".sql"));
+        return String.join(File.separator, rootDataDir(scale), "experiments", StringUtils.removeEnd(queryName, ".sql"));
     }
 
     public String experimentCorrectnessHashesRoot(int scale) {
-        return String.join(File.separator, rootTpcdsDataDir(scale), "experiments_correctness_hashes");
+        return String.join(File.separator, rootDataDir(scale), "experiments_correctness_hashes");
     }
 
     public String experimentCorrectnessHashesLocation(int scale, String queryName) {

@@ -30,8 +30,8 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 @ImmutablesConfigStyle
-@JsonDeserialize(as = ImmutableTpcdsBenchmarkConfig.class)
-public interface TpcdsBenchmarkConfig {
+@JsonDeserialize(as = ImmutableBenchmarkConfig.class)
+public interface BenchmarkConfig {
     ObjectMapper MAPPER = new ObjectMapper(new YAMLFactory()).registerModules(new Jdk8Module(), new GuavaModule());
 
     SparkConfiguration spark();
@@ -79,11 +79,11 @@ public interface TpcdsBenchmarkConfig {
         });
     }
 
-    static TpcdsBenchmarkConfig parse(Path configFile) throws IOException {
-        return MAPPER.readValue(configFile.toFile(), TpcdsBenchmarkConfig.class);
+    static BenchmarkConfig parse(Path configFile) throws IOException {
+        return MAPPER.readValue(configFile.toFile(), BenchmarkConfig.class);
     }
 
-    class Builder extends ImmutableTpcdsBenchmarkConfig.Builder {}
+    class Builder extends ImmutableBenchmarkConfig.Builder {}
 
     static Builder builder() {
         return new Builder();

@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package com.palantir.spark.tpcds.datagen;
+package com.palantir.spark.benchmark;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.palantir.spark.tpcds.paths.TpcdsPaths;
-import com.palantir.spark.tpcds.schemas.TpcdsSchemas;
+import com.palantir.spark.tpcds.datagen.ParquetTransformer;
+import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
+import com.palantir.spark.tpcds.paths.BenchmarkPaths;
+import com.palantir.spark.tpcds.schemas.Schemas;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,20 +43,22 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
                 "file://" + destinationDataDirectory.toFile().getAbsolutePath();
         FileSystem dataFileSystem =
                 FileSystem.get(URI.create(fullyQualifiedDestinationDir), TEST_HADOOP_CONFIGURATION.toHadoopConf());
+        int scale = 1;
 
+        BenchmarkPaths paths =
+                new BenchmarkPaths(destinationDataDirectory.toFile().getAbsolutePath());
         TpcdsDataGenerator generator = new TpcdsDataGenerator(
                 workingDir,
-                ImmutableList.of(1),
+                ImmutableList.of(scale),
                 false,
                 dataFileSystem,
-                new DefaultParquetTransformer(),
+                mock(ParquetTransformer.class),
                 sparkSession,
-                new TpcdsPaths(fullyQualifiedDestinationDir),
-                new TpcdsSchemas(),
+                paths,
+                new Schemas(),
                 MoreExecutors.newDirectExecutorService());
         generator.generateData();
-        try (Stream<Path> generatedCsvFiles = Files.list(
-                        Paths.get(destinationDataDirectory.toString(), "tpcds_data", "scale=1", "raw_csv"))
+        try (Stream<Path> generatedCsvFiles = Files.list(Paths.get(paths.csvDir(scale)))
                 .filter(path -> path.toString().endsWith(".csv"))) {
             assertThat(generatedCsvFiles.count()).isEqualTo(25);
         }

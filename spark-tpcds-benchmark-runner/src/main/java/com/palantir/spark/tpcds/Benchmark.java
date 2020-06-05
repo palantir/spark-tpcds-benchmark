@@ -21,15 +21,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.CharStreams;
 import com.palantir.logsafe.SafeArg;
-import com.palantir.spark.tpcds.config.TpcdsBenchmarkConfig;
+import com.palantir.spark.tpcds.config.BenchmarkConfig;
 import com.palantir.spark.tpcds.correctness.TpcdsQueryCorrectnessChecks;
 import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
-import com.palantir.spark.tpcds.metrics.TpcdsBenchmarkMetrics;
-import com.palantir.spark.tpcds.paths.TpcdsPaths;
+import com.palantir.spark.tpcds.metrics.BenchmarkMetrics;
+import com.palantir.spark.tpcds.paths.BenchmarkPaths;
 import com.palantir.spark.tpcds.queries.Query;
 import com.palantir.spark.tpcds.queries.SortBenchmarkQuery;
 import com.palantir.spark.tpcds.queries.SqlQuery;
-import com.palantir.spark.tpcds.registration.TpcdsTableRegistration;
+import com.palantir.spark.tpcds.registration.TableRegistration;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -46,30 +46,30 @@ import org.apache.spark.sql.functions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class TpcdsBenchmark {
+public final class Benchmark {
 
-    private static final Logger log = LoggerFactory.getLogger(TpcdsBenchmark.class);
+    private static final Logger log = LoggerFactory.getLogger(Benchmark.class);
 
     private static final ImmutableSet<String> BLACKLISTED_QUERIES =
             ImmutableSet.of("q23b.sql", "q39a.sql", "q39b.sql", "q14b.sql", "q49.sql", "q64.sql", "q77.sql");
 
-    private final TpcdsBenchmarkConfig config;
+    private final BenchmarkConfig config;
     private final TpcdsDataGenerator dataGenerator;
-    private final TpcdsTableRegistration registration;
-    private final TpcdsPaths paths;
+    private final TableRegistration registration;
+    private final BenchmarkPaths paths;
     private final TpcdsQueryCorrectnessChecks correctness;
-    private final TpcdsBenchmarkMetrics metrics;
+    private final BenchmarkMetrics metrics;
     private final SparkSession spark;
     private final FileSystem dataFileSystem;
     private final Supplier<ImmutableList<Query>> sqlQuerySupplier;
 
-    public TpcdsBenchmark(
-            TpcdsBenchmarkConfig config,
+    public Benchmark(
+            BenchmarkConfig config,
             TpcdsDataGenerator dataGenerator,
-            TpcdsTableRegistration registration,
-            TpcdsPaths paths,
+            TableRegistration registration,
+            BenchmarkPaths paths,
             TpcdsQueryCorrectnessChecks correctness,
-            TpcdsBenchmarkMetrics metrics,
+            BenchmarkMetrics metrics,
             SparkSession spark,
             FileSystem dataFileSystem) {
         this.config = config;
@@ -181,7 +181,7 @@ public final class TpcdsBenchmark {
     private static ImmutableList<Query> buildSqlQueries(SparkSession spark) {
         ImmutableList.Builder<Query> queries = ImmutableList.builder();
         try (TarArchiveInputStream tarArchiveInputStream = new TarArchiveInputStream(
-                        TpcdsBenchmark.class.getClassLoader().getResourceAsStream("queries.tar"));
+                        Benchmark.class.getClassLoader().getResourceAsStream("queries.tar"));
                 InputStreamReader tarArchiveReader =
                         new InputStreamReader(tarArchiveInputStream, StandardCharsets.UTF_8)) {
             TarArchiveEntry entry;
