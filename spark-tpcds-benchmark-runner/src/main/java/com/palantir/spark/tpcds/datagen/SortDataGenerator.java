@@ -17,5 +17,5 @@
 package com.palantir.spark.tpcds.datagen;
 
 public interface SortDataGenerator {
-    void generate() throws Exception;
+    void generate();
 }

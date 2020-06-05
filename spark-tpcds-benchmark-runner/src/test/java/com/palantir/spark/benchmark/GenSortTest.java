@@ -18,6 +18,7 @@ package com.palantir.spark.benchmark;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.palantir.spark.tpcds.datagen.DefaultParquetTransformer;
 import com.palantir.spark.tpcds.datagen.GenSortDataGenerator;
 import com.palantir.spark.tpcds.paths.BenchmarkPaths;
@@ -29,6 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.jupiter.api.Test;
 
@@ -53,11 +55,11 @@ public final class GenSortTest extends AbstractLocalSparkTest {
                 paths,
                 new TableRegistration(paths, dataFileSystem, sparkSession, new Schemas()),
                 workingDir,
-                100);
+                ImmutableList.of(scale));
         genSortDataGenerator.generate();
 
         List<String> generatedLines = read(Paths.get(paths.tableCsvFile(scale, "gensort_data")), "csv");
-        assertThat(generatedLines).hasSize(100);
+        assertThat(generatedLines).hasSize(10485); // (1GB / 100 bytes)
 
         List<String> copiedParquet = read(Paths.get(paths.tableParquetLocation(scale, "gensort_data")), "parquet");
         assertThat(copiedParquet).hasSameElementsAs(generatedLines);
@@ -65,6 +67,9 @@ public final class GenSortTest extends AbstractLocalSparkTest {
         SortBenchmarkQuery query = new SortBenchmarkQuery(sparkSession);
         // Should not throw. We can't assert sortedness since the data could be saved in multiple partitions.
         query.save(paths.experimentResultLocation(scale, "gensort"));
+
+        // Clean up
+        FileUtils.deleteDirectory(destinationDataDirectory.toFile());
     }
 
     private List<String> read(Path path, String format) {

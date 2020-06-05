@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: Support passing in a scale for gensort and wire to benchmark runner
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/187
