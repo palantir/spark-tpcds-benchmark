@@ -36,6 +36,8 @@ public interface HadoopConfiguration {
 
     Map<String, String> hadoopConf();
 
+    Optional<FilesystemConfiguration> fsConf();
+
     @Value.Derived
     default Configuration toHadoopConf() {
         Configuration hadoopConf = new Configuration();
