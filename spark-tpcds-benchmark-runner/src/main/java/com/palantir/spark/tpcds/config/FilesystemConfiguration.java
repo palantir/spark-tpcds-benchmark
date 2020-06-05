@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2019 Palantir Technologies Inc. All rights reserved.
+ * (c) Copyright 2020 Palantir Technologies Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,33 @@ package com.palantir.spark.tpcds.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import java.util.Map;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", visible = true)
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = S3Configuration.class, name = FilesystemConfiguration.S3A),
-    @JsonSubTypes.Type(value = AzureBlobStoreConfiguration.class, name = FilesystemConfiguration.AZURE_BLOB_STORE),
+    @JsonSubTypes.Type(value = SimpleFilesystemConfiguration.class, name = FilesystemConfiguration.SIMPLE_TYPE),
+    @JsonSubTypes.Type(value = S3Configuration.class, name = FilesystemConfiguration.AMAZON_S3_TYPE),
+    @JsonSubTypes.Type(value = AzureBlobStoreConfiguration.class, name = FilesystemConfiguration.AZURE_BLOB_STORE)
 })
 public abstract class FilesystemConfiguration {
-    public static final String S3A = "s3a";
-    public static final String AZURE_BLOB_STORE = "wasb";
-    public static final String LOCAL = "local";
+    public static final String SIMPLE_TYPE = "simple";
+    public static final String AMAZON_S3_TYPE = "s3a";
+    public static final String AZURE_BLOB_STORE = "azure";
 
     @JsonProperty("type")
     public abstract String type();
+
+    public abstract String baseUri();
+
+    public abstract Map<String, String> toHadoopConf();
+
+    public abstract <T> T accept(Visitor<T> visitor);
+
+    public interface Visitor<T> {
+        T visitSimple(SimpleFilesystemConfiguration simple);
+
+        T visitS3(S3Configuration s3);
+
+        T visitAzure(AzureBlobStoreConfiguration azure);
+    }
 }

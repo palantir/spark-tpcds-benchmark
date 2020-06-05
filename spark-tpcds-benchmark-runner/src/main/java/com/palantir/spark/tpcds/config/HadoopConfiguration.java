@@ -36,7 +36,7 @@ public interface HadoopConfiguration {
 
     Map<String, String> hadoopConf();
 
-    Optional<FilesystemConfiguration> fsConf();
+    Map<String, FilesystemConfiguration> fsConf();
 
     @Value.Derived
     default Configuration toHadoopConf() {
@@ -49,6 +49,7 @@ public interface HadoopConfiguration {
             }
         }
         hadoopConf().forEach(hadoopConf::set);
+
         return hadoopConf;
     }
 

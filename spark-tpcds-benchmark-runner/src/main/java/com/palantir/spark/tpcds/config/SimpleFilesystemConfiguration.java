@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2019 Palantir Technologies Inc. All rights reserved.
+ * (c) Copyright 2020 Palantir Technologies Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,28 +20,19 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableMap;
 import com.palantir.spark.tpcds.immutables.ImmutablesConfigStyle;
 import java.util.Map;
-import java.util.Optional;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.immutables.value.Value;
 
 @Value.Immutable
 @ImmutablesConfigStyle
-@JsonDeserialize(as = ImmutableS3Configuration.class)
-public abstract class S3Configuration extends FilesystemConfiguration {
+@JsonDeserialize(as = ImmutableSimpleFilesystemConfiguration.class)
+public abstract class SimpleFilesystemConfiguration extends FilesystemConfiguration {
     @Override
     public final String type() {
-        return FilesystemConfiguration.AMAZON_S3_TYPE;
+        return FilesystemConfiguration.SIMPLE_TYPE;
     }
 
-    public abstract Optional<String> accessKey();
-
-    public abstract Optional<String> secretKey();
-
+    @Override
     public final Map<String, String> toHadoopConf() {
-        ImmutableMap.Builder<String, String> builder =
-                ImmutableMap.<String, String>builder().put(Constants.FAST_UPLOAD, "true");
-        accessKey().ifPresent(accessKey -> builder.put(Constants.ACCESS_KEY, accessKey));
-        secretKey().ifPresent(secretKey -> builder.put(Constants.SECRET_KEY, secretKey));
-        return builder.build();
+        return ImmutableMap.of();
     }
 }

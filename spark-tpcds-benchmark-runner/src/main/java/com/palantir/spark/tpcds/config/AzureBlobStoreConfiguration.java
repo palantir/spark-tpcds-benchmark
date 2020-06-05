@@ -17,7 +17,11 @@
 package com.palantir.spark.tpcds.config;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.collect.ImmutableMap;
 import com.palantir.spark.tpcds.immutables.ImmutablesConfigStyle;
+import java.util.Map;
+import java.util.Optional;
+import org.apache.commons.lang3.StringUtils;
 import org.immutables.value.Value;
 
 @Value.Immutable
@@ -29,7 +33,29 @@ public abstract class AzureBlobStoreConfiguration extends FilesystemConfiguratio
         return FilesystemConfiguration.AZURE_BLOB_STORE;
     }
 
-    public abstract String account();
+    public abstract String accountName();
 
     public abstract String accessKey();
+
+    public abstract Optional<String> workingDirectory();
+
+    private String realWorkingDirectory() {
+        return StringUtils.strip(workingDirectory().orElse("spark-benchmark"), "/");
+    }
+
+    public final String accessKeyPropertyName() {
+        return "fs.azure.account.key." + accountName() + ".blob.core.windows.net";
+    }
+
+    @Override
+    public final String baseUri() {
+        return "wasbs://data@" + accountName() + ".blob.core.windows.net/" + realWorkingDirectory();
+    }
+
+    @Override
+    public final Map<String, String> toHadoopConf() {
+        return ImmutableMap.<String, String>builder()
+                .put(accessKeyPropertyName(), accessKey())
+                .build();
+    }
 }
