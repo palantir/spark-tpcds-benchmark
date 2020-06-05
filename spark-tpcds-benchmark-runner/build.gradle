@@ -27,9 +27,8 @@ dependencies {
     implementation 'com.palantir.safe-logging:preconditions'
     implementation 'org.apache.spark:spark-sql_2.11'
 
-    runtimeOnly "org.apache.hadoop:hadoop-aws"
-    runtimeOnly "org.apache.hadoop:hadoop-azure"
-    runtimeOnly "org.apache.hadoop:hadoop-azure-datalake"
+    implementation "org.apache.hadoop:hadoop-aws"
+    implementation "org.apache.hadoop:hadoop-azure"
     runtimeOnly 'org.apache.spark:spark-yarn_2.11'
 
     testImplementation 'org.assertj:assertj-core'
