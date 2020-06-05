@@ -26,11 +26,8 @@ dependencies {
     implementation 'com.google.guava:guava'
     implementation 'com.palantir.safe-logging:preconditions'
     implementation 'org.apache.spark:spark-sql_2.11'
-    implementation "org.apache.hadoop:hadoop-aws"
-    implementation "com.azure:azure-storage-blob"
-    implementation "com.azure:azure-storage-common"
-    implementation "io.netty:netty-all" // restoring netty dependencies from azure-storage-common
 
+    runtimeOnly "org.apache.hadoop:hadoop-aws"
     runtimeOnly "org.apache.hadoop:hadoop-azure"
     runtimeOnly "org.apache.hadoop:hadoop-azure-datalake"
     runtimeOnly 'org.apache.spark:spark-yarn_2.11'
