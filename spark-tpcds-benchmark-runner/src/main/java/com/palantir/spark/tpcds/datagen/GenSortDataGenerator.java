@@ -38,6 +38,8 @@ import org.slf4j.LoggerFactory;
 public final class GenSortDataGenerator implements SortDataGenerator {
     private static final Logger log = LoggerFactory.getLogger(GenSortDataGenerator.class);
 
+    private static final int BYTES_PER_RECORD = 100;
+
     private static final Path GEN_SORT_MACOS_PATH = Paths.get("service", "bin", "gensort", "gensort_osx");
     private static final Path GENSORT_TGZ_LINUX_PATH =
             Paths.get("service", "bin", "gensort", "gensort-linux-1.5.tar.gz");
@@ -47,16 +49,13 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     private static final String GENSORT_DATA_DIR_NAME = "data";
     private static final String GENERATED_DATA_FILE_NAME = "gensort_data";
 
-    // TODO(rahij): run with actual scale and estimate num records.
-    private static final int SCALE = 1;
-
     private final SparkSession spark;
     private final FileSystem destinationFileSystem;
     private final ParquetTransformer parquetTransformer;
     private final BenchmarkPaths paths;
     private final TableRegistration registration;
     private final Path tempWorkingDir;
-    private final long numRecords;
+    private final int scale;
 
     public GenSortDataGenerator(
             SparkSession spark,
@@ -65,14 +64,14 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             BenchmarkPaths paths,
             TableRegistration registration,
             Path tempWorkingDir,
-            long numRecords) {
+            int scale) {
         this.spark = spark;
         this.destinationFileSystem = destinationFileSystem;
         this.parquetTransformer = parquetTransformer;
         this.paths = paths;
         this.registration = registration;
         this.tempWorkingDir = tempWorkingDir;
-        this.numRecords = numRecords;
+        this.scale = scale;
     }
 
     @Override
@@ -93,7 +92,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                     .command(
                             genSortFilePath.toFile().getAbsolutePath(),
                             "-a",
-                            Long.toString(numRecords),
+                            Long.toString(estimateNumRecords()),
                             dataDir.resolve(GENERATED_DATA_FILE_NAME + ".csv")
                                     .toAbsolutePath()
                                     .toString())
@@ -107,16 +106,16 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             log.info("Finished running gensort");
             DataGenUtils.uploadFiles(
                     destinationFileSystem,
-                    paths.csvDir(SCALE),
+                    paths.csvDir(scale),
                     dataDir.toFile(),
                     MoreExecutors.newDirectExecutorService());
             StructType schema = DataTypes.createStructType(
                     ImmutableList.of(DataTypes.createStructField("record", DataTypes.StringType, false)));
             String destinationPath =
-                    Paths.get(paths.parquetDir(SCALE), GENERATED_DATA_FILE_NAME).toString();
+                    Paths.get(paths.parquetDir(scale), GENERATED_DATA_FILE_NAME).toString();
             parquetTransformer.transform(
-                    spark, schema, paths.tableCsvFile(SCALE, GENERATED_DATA_FILE_NAME), destinationPath, "\n");
-            registration.registerTable("gensort_data", schema, SCALE);
+                    spark, schema, paths.tableCsvFile(scale, GENERATED_DATA_FILE_NAME), destinationPath, "\n");
+            registration.registerTable("gensort_data", schema, scale);
         } finally {
             try {
                 FileUtils.deleteDirectory(tempWorkingDir.toFile());
@@ -127,6 +126,10 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                         e);
             }
         }
+    }
+
+    private int estimateNumRecords() {
+        return (scale * 1024 * 1024) / BYTES_PER_RECORD;
     }
 
     private Path extractBinary() throws IOException {
