@@ -21,21 +21,21 @@ plugins {
 }
 
 dependencies {
-    compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
-    compile 'com.fasterxml.jackson.datatype:jackson-datatype-guava'
-    compile 'com.google.guava:guava'
-    compile 'com.palantir.safe-logging:preconditions'
-    compile 'org.apache.spark:spark-sql_2.11'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-guava'
+    implementation 'com.google.guava:guava'
+    implementation 'com.palantir.safe-logging:preconditions'
+    implementation 'org.apache.spark:spark-sql_2.11'
+    
+    runtimeOnly 'org.apache.spark:spark-yarn_2.11'
 
-    testCompile 'org.assertj:assertj-core'
-    testCompile 'org.junit.jupiter:junit-jupiter'
-    testCompile 'org.mockito:mockito-core'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.mockito:mockito-core'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
     annotationProcessor 'org.immutables:value'
     compileOnly 'org.immutables:value::annotations'
-
-    runtime 'org.apache.spark:spark-yarn_2.11'
 }
 
 distribution {
