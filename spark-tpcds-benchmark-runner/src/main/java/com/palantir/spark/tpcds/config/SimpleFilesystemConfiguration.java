@@ -35,4 +35,8 @@ public abstract class SimpleFilesystemConfiguration extends FilesystemConfigurat
     public final Map<String, String> toHadoopConf() {
         return ImmutableMap.of();
     }
+
+    public static SimpleFilesystemConfiguration of(String baseUri) {
+        return ImmutableSimpleFilesystemConfiguration.builder().baseUri(baseUri).build();
+    }
 }

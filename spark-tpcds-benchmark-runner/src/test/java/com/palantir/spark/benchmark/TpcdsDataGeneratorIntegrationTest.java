@@ -46,7 +46,7 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
         int scale = 1;
 
         BenchmarkPaths paths =
-                new BenchmarkPaths(destinationDataDirectory.toFile().getAbsolutePath());
+                new BenchmarkPaths(destinationDataDirectory.toFile().toURI());
         TpcdsDataGenerator generator = new TpcdsDataGenerator(
                 workingDir,
                 ImmutableList.of(scale),

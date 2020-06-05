@@ -17,6 +17,7 @@
 package com.palantir.spark.tpcds.config;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.collect.ImmutableMap;
 import com.palantir.common.streams.KeyedStream;
 import com.palantir.logsafe.SafeArg;
 import com.palantir.logsafe.exceptions.SafeIllegalArgumentException;
@@ -40,9 +41,15 @@ public interface HadoopConfiguration {
 
     Map<String, String> hadoopConf();
 
-    Map<String, FilesystemConfiguration> filesystems();
+    @Value.Default
+    default Map<String, FilesystemConfiguration> filesystems() {
+        return ImmutableMap.of("local", SimpleFilesystemConfiguration.of("file:///tmp/spark-benchmark"));
+    }
 
-    String defaultFilesystem();
+    @Value.Default
+    default String defaultFilesystem() {
+        return "local";
+    }
 
     @Value.Derived
     default String defaultFsUri() {
@@ -85,7 +92,7 @@ public interface HadoopConfiguration {
                 resolvedConfiguration = loadConfFromFile(resolvedConfiguration, child);
             }
         } else if (confFile.isFile() && confFile.getName().endsWith(".xml")) {
-            resolvedConfiguration.addResource(confFile.toURL());
+            resolvedConfiguration.addResource(confFile.toURI().toURL());
         }
         return resolvedConfiguration;
     }

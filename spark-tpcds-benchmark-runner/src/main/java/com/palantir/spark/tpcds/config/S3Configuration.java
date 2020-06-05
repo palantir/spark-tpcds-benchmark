@@ -37,6 +37,7 @@ public abstract class S3Configuration extends FilesystemConfiguration {
 
     public abstract Optional<String> secretKey();
 
+    @Override
     public final Map<String, String> toHadoopConf() {
         ImmutableMap.Builder<String, String> builder =
                 ImmutableMap.<String, String>builder().put(Constants.FAST_UPLOAD, "true");
@@ -44,4 +45,10 @@ public abstract class S3Configuration extends FilesystemConfiguration {
         secretKey().ifPresent(secretKey -> builder.put(Constants.SECRET_KEY, secretKey));
         return builder.build();
     }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder extends ImmutableS3Configuration.Builder {}
 }

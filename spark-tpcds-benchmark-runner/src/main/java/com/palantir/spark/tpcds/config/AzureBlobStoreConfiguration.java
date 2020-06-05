@@ -58,4 +58,10 @@ public abstract class AzureBlobStoreConfiguration extends FilesystemConfiguratio
                 .put(accessKeyPropertyName(), accessKey())
                 .build();
     }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder extends ImmutableAzureBlobStoreConfiguration.Builder {}
 }
