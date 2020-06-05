@@ -32,7 +32,6 @@ spark:
   master: local[4]
   sparkConf:
     spark.yarn.jars: service/lib/*
-#testDataDir: hdfs://localhost:8020/data/tpcds/test_data
-testDataDir: data/tpcds/test_data
+testDataDir: test_data
 iterations: 1
 #excludeSqlQueries: false

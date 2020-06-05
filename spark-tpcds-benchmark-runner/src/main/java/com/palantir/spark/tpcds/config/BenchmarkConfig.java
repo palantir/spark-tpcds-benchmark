@@ -27,6 +27,7 @@ import com.palantir.spark.tpcds.immutables.ImmutablesConfigStyle;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import org.immutables.value.Value;
 
@@ -84,8 +85,7 @@ public interface BenchmarkConfig {
             Preconditions.checkArgument(scale > 0, "All data scales must be positive.");
         });
         Preconditions.checkArgument(
-                !(new org.apache.hadoop.fs.Path(testDataDirRaw()).isAbsolute()),
-                "Must specify a relative path for testDataDir");
+                !Paths.get(testDataDirRaw()).isAbsolute(), "Must specify a relative path for testDataDir");
     }
 
     static BenchmarkConfig parse(Path configFile) throws IOException {

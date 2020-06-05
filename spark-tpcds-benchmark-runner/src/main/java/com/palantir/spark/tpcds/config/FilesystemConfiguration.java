@@ -38,14 +38,4 @@ public abstract class FilesystemConfiguration {
     public abstract String baseUri();
 
     public abstract Map<String, String> toHadoopConf();
-
-    public abstract <T> T accept(Visitor<T> visitor);
-
-    public interface Visitor<T> {
-        T visitSimple(SimpleFilesystemConfiguration simple);
-
-        T visitS3(S3Configuration s3);
-
-        T visitAzure(AzureBlobStoreConfiguration azure);
-    }
 }
