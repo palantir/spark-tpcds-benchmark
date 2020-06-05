@@ -61,8 +61,6 @@ public interface BenchmarkConfig {
         return 1;
     }
 
-    SortBenchmarkConfig sort();
-
     @Value.Default
     default boolean excludeSqlQueries() {
         return false;

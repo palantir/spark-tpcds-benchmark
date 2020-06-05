@@ -20,6 +20,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.palantir.spark.tpcds.config.BenchmarkConfig;
 import com.palantir.spark.tpcds.correctness.TpcdsQueryCorrectnessChecks;
 import com.palantir.spark.tpcds.datagen.DefaultParquetTransformer;
+import com.palantir.spark.tpcds.datagen.GenSortDataGenerator;
+import com.palantir.spark.tpcds.datagen.SortDataGenerator;
 import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
 import com.palantir.spark.tpcds.metrics.BenchmarkMetrics;
 import com.palantir.spark.tpcds.paths.BenchmarkPaths;
@@ -77,19 +79,37 @@ public final class BenchmarkRunner {
                             .setDaemon(true)
                             .setNameFormat("data-generator-%d")
                             .build());
+            DefaultParquetTransformer parquetTransformer = new DefaultParquetTransformer();
             TpcdsDataGenerator dataGenerator = new TpcdsDataGenerator(
                     config.dsdgenWorkLocalDir(),
                     config.dataScalesGb(),
                     config.overwriteData(),
                     dataFileSystem,
-                    new DefaultParquetTransformer(),
+                    parquetTransformer,
                     spark,
                     paths,
                     schemas,
                     dataGeneratorThreadPool);
+            SortDataGenerator sortDataGenerator = new GenSortDataGenerator(
+                    spark,
+                    dataFileSystem,
+                    parquetTransformer,
+                    paths,
+                    registration,
+                    config.dsdgenWorkLocalDir(),
+                    config.dataScalesGb());
             TpcdsQueryCorrectnessChecks correctness = new TpcdsQueryCorrectnessChecks(paths, dataFileSystem, spark);
             BenchmarkMetrics metrics = new BenchmarkMetrics(config, paths, spark);
-            new Benchmark(config, dataGenerator, registration, paths, correctness, metrics, spark, dataFileSystem)
+            new Benchmark(
+                            config,
+                            dataGenerator,
+                            sortDataGenerator,
+                            registration,
+                            paths,
+                            correctness,
+                            metrics,
+                            spark,
+                            dataFileSystem)
                     .run();
         }
     }

@@ -18,6 +18,7 @@ package com.palantir.spark.benchmark;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.palantir.spark.tpcds.datagen.DefaultParquetTransformer;
 import com.palantir.spark.tpcds.datagen.GenSortDataGenerator;
 import com.palantir.spark.tpcds.paths.BenchmarkPaths;
@@ -54,7 +55,7 @@ public final class GenSortTest extends AbstractLocalSparkTest {
                 paths,
                 new TableRegistration(paths, dataFileSystem, sparkSession, new Schemas()),
                 workingDir,
-                scale);
+                ImmutableList.of(scale));
         genSortDataGenerator.generate();
 
         List<String> generatedLines = read(Paths.get(paths.tableCsvFile(scale, "gensort_data")), "csv");

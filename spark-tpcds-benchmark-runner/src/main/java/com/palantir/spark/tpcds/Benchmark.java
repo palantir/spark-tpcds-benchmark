@@ -23,6 +23,7 @@ import com.google.common.io.CharStreams;
 import com.palantir.logsafe.SafeArg;
 import com.palantir.spark.tpcds.config.BenchmarkConfig;
 import com.palantir.spark.tpcds.correctness.TpcdsQueryCorrectnessChecks;
+import com.palantir.spark.tpcds.datagen.SortDataGenerator;
 import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
 import com.palantir.spark.tpcds.metrics.BenchmarkMetrics;
 import com.palantir.spark.tpcds.paths.BenchmarkPaths;
@@ -55,6 +56,7 @@ public final class Benchmark {
 
     private final BenchmarkConfig config;
     private final TpcdsDataGenerator dataGenerator;
+    private final SortDataGenerator sortDataGenerator;
     private final TableRegistration registration;
     private final BenchmarkPaths paths;
     private final TpcdsQueryCorrectnessChecks correctness;
@@ -66,6 +68,7 @@ public final class Benchmark {
     public Benchmark(
             BenchmarkConfig config,
             TpcdsDataGenerator dataGenerator,
+            SortDataGenerator sortDataGenerator,
             TableRegistration registration,
             BenchmarkPaths paths,
             TpcdsQueryCorrectnessChecks correctness,
@@ -74,6 +77,7 @@ public final class Benchmark {
             FileSystem dataFileSystem) {
         this.config = config;
         this.dataGenerator = dataGenerator;
+        this.sortDataGenerator = sortDataGenerator;
         this.registration = registration;
         this.correctness = correctness;
         this.metrics = metrics;
@@ -86,6 +90,7 @@ public final class Benchmark {
     public void run() throws IOException {
         if (config.generateData()) {
             dataGenerator.generateData();
+            sortDataGenerator.generate();
         }
         for (int iteration = 0; iteration < config.iterations(); iteration++) {
             log.info(
