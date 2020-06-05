@@ -18,14 +18,15 @@ package com.palantir.spark.tpcds.paths;
 
 import com.palantir.spark.tpcds.constants.TpcdsTable;
 import java.io.File;
+import java.net.URI;
 import org.apache.commons.lang3.StringUtils;
 
 public final class BenchmarkPaths {
 
     private final String testDataDir;
 
-    public BenchmarkPaths(String testDataDir) {
-        this.testDataDir = testDataDir;
+    public BenchmarkPaths(URI testDataDir) {
+        this.testDataDir = testDataDir.toString();
     }
 
     public String rootDataDir(int scale) {

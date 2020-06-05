@@ -5,9 +5,24 @@ dsdgenWorkLocalDir: /tmp/tpcds_work_dir
 generateData: true
 hadoop:
   hadoopConfDirs: []
-  hadoopConf:
-
-
+  hadoopConf: {}
+  filesystems:
+    local:
+      type: simple
+      baseUri: file:///tmp/spark-benchmark
+    hdfs:
+      type: simple
+      baseUri: hdfs://spark-benchmark
+    s3a:
+      type: s3a
+      baseUri: s3a://MY_S3_BUCKET/spark-benchmark
+      accessKey: MY_ACCESS_KEY
+      secretKey: MY_SECRET_KEY
+    azure:
+      type: azure
+      accountName: MY_ACCOUNT_NAME
+      accessKey: MY_ACCESS_KEY
+  defaultFilesystem: local
 overwriteData: false
 spark:
   #executorCores: 1
@@ -18,6 +33,6 @@ spark:
   sparkConf:
     spark.yarn.jars: service/lib/*
 #testDataDir: hdfs://localhost:8020/data/tpcds/test_data
-testDataDir: file:///tmp/hdfs/data/tpcds/test_data
+testDataDir: data/tpcds/test_data
 iterations: 1
 #excludeSqlQueries: false

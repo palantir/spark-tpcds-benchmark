@@ -42,16 +42,15 @@ public interface HadoopConfiguration {
 
     Map<String, FilesystemConfiguration> filesystems();
 
-    Optional<String> defaultFilesystem();
+    String defaultFilesystem();
 
     @Value.Derived
-    default Optional<String> defaultFsUri() {
-        return defaultFilesystem()
-                .map(fsName -> Optional.ofNullable(filesystems().get(fsName))
-                        .orElseThrow(() -> new SafeIllegalArgumentException(
-                                "Specified defaultFilesystem is not configured",
-                                SafeArg.of("defaultFilesystem", fsName))))
-                .map(FilesystemConfiguration::baseUri);
+    default String defaultFsUri() {
+        return Optional.ofNullable(filesystems().get(defaultFilesystem()))
+                .orElseThrow(() -> new SafeIllegalArgumentException(
+                        "Specified defaultFilesystem is not configured",
+                        SafeArg.of("defaultFilesystem", defaultFilesystem())))
+                .baseUri();
     }
 
     @Value.Derived
@@ -75,10 +74,7 @@ public interface HadoopConfiguration {
                         filesystems().values().stream().flatMap(fsConf -> fsConf.toHadoopConf().entrySet().stream()))
                 .collectToMap()
                 .forEach(hadoopConf::set);
-        if (defaultFsUri().isPresent()) {
-            hadoopConf.set(
-                    CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, defaultFsUri().get());
-        }
+        hadoopConf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, defaultFsUri());
         return hadoopConf;
     }
 

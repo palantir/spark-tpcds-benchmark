@@ -52,8 +52,7 @@ public final class BenchmarkRunner {
         }
         BenchmarkConfig config = BenchmarkConfig.parse(configFile);
         Configuration hadoopConf = config.hadoop().toHadoopConf();
-        try (FileSystem dataFileSystem =
-                FileSystem.get(new org.apache.hadoop.fs.Path(config.testDataDir()).toUri(), hadoopConf)) {
+        try (FileSystem dataFileSystem = FileSystem.get(config.testDataDir(), hadoopConf)) {
             SparkConf sparkConf = new SparkConf().setMaster(config.spark().master());
             config.spark().sparkConf().forEach(sparkConf::set);
             hadoopConf.forEach(confEntry ->
