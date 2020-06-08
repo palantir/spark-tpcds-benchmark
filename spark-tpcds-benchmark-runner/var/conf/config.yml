@@ -15,6 +15,7 @@ spark:
   master: local[4]
   sparkConf:
     spark.yarn.jars: service/lib/*
+    spark.sql.adaptive.enabled: true
 #testDataDir: hdfs://localhost:8020/data/tpcds/test_data
 testDataDir: file:///tmp/hdfs/data/tpcds/test_data
 iterations: 1
