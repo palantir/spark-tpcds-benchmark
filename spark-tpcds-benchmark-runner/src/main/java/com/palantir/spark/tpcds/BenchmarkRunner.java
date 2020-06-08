@@ -69,7 +69,8 @@ public final class BenchmarkRunner {
             }
 
             SparkSession spark = SparkSession.builder().config(sparkConf).getOrCreate();
-            BenchmarkPaths paths = new BenchmarkPaths(config.testDataDir());
+            BenchmarkPaths paths = new BenchmarkPaths(
+                    Paths.get(config.testDataDir()).toAbsolutePath().toString());
             Schemas schemas = new Schemas();
             TableRegistration registration = new TableRegistration(paths, dataFileSystem, spark, schemas);
             ExecutorService dataGeneratorThreadPool = Executors.newFixedThreadPool(
