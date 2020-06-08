@@ -25,7 +25,6 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.palantir.logsafe.Preconditions;
 import com.palantir.spark.tpcds.immutables.ImmutablesConfigStyle;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -47,8 +46,8 @@ public interface BenchmarkConfig {
     String testDataDirRaw();
 
     @Value.Derived
-    default URI testDataDir() {
-        return new org.apache.hadoop.fs.Path(hadoop().defaultFsUri(), testDataDirRaw()).toUri();
+    default org.apache.hadoop.fs.Path testDataDir() {
+        return new org.apache.hadoop.fs.Path(hadoop().defaultFsUri(), testDataDirRaw());
     }
 
     boolean generateData();
