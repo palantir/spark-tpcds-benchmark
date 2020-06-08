@@ -17,17 +17,24 @@
 package com.palantir.spark.tpcds.datagen;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.palantir.logsafe.SafeArg;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.spark.tpcds.paths.BenchmarkPaths;
 import com.palantir.spark.tpcds.registration.TableRegistration;
 import com.palantir.spark.tpcds.util.DataGenUtils;
+import com.palantir.spark.tpcds.util.MoreFutures;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,6 +48,8 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     private static final Logger log = LoggerFactory.getLogger(GenSortDataGenerator.class);
 
     private static final int BYTES_PER_RECORD = 100;
+    private static final int PARTITION_SIZE = 1024 * 1024 * 1024; // 1GB
+    private static final int RECORDS_PER_CHUNK = PARTITION_SIZE / BYTES_PER_RECORD;
 
     private static final Path GEN_SORT_MACOS_PATH = Paths.get("service", "bin", "gensort", "gensort_osx");
     private static final Path GENSORT_TGZ_LINUX_PATH =
@@ -58,6 +67,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     private final TableRegistration registration;
     private final Path tempWorkingDir;
     private final List<Integer> scales;
+    private final ListeningExecutorService dataGeneratorThreadPool;
 
     public GenSortDataGenerator(
             SparkSession spark,
@@ -66,7 +76,8 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             BenchmarkPaths paths,
             TableRegistration registration,
             Path tempWorkingDir,
-            List<Integer> scales) {
+            List<Integer> scales,
+            ExecutorService dataGeneratorThreadPool) {
         this.spark = spark;
         this.destinationFileSystem = destinationFileSystem;
         this.parquetTransformer = parquetTransformer;
@@ -74,6 +85,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
         this.registration = registration;
         this.tempWorkingDir = tempWorkingDir;
         this.scales = scales;
+        this.dataGeneratorThreadPool = MoreExecutors.listeningDecorator(dataGeneratorThreadPool);
     }
 
     @Override
@@ -91,7 +103,30 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             Path genSortBinaryPath = extractBinary();
             log.info("Extracted gensort binary: {}", SafeArg.of("genSortBinaryPath", genSortBinaryPath));
             Path dataDir = Files.createDirectory(tempWorkingDir.resolve(GENSORT_DATA_DIR_NAME));
-            scales.forEach(scale -> generateData(dataDir, scale, genSortBinaryPath));
+
+            scales.forEach(scale -> {
+                long totalNumRecords = estimateNumRecords(scale);
+
+                // We are estimating the number of records anyway, so it's fine if we generate an extra partition
+                // in some cases.
+                long numberOfPartitions = (totalNumRecords / RECORDS_PER_CHUNK) + 1;
+                LongStream.range(0, numberOfPartitions)
+                        .mapToObj(partitionIndex ->
+                                generateData(dataDir, scale, partitionIndex, totalNumRecords, genSortBinaryPath))
+                        .collect(Collectors.toList()) // Always collect to force kick off all tasks
+                        .forEach(MoreFutures::join);
+
+                StructType schema = DataTypes.createStructType(
+                        ImmutableList.of(DataTypes.createStructField("record", DataTypes.StringType, false)));
+                String destinationPath = Paths.get(paths.parquetDir(scale), GENERATED_DATA_FILE_NAME)
+                        .toString();
+
+                Set<String> generatedCsvPaths = LongStream.range(0, numberOfPartitions)
+                        .mapToObj(partitionIndex -> paths.tableCsvFile(scale, GENERATED_DATA_FILE_NAME, partitionIndex))
+                        .collect(Collectors.toSet());
+                parquetTransformer.transform(spark, schema, generatedCsvPaths, destinationPath, "\n");
+                registration.registerTable("gensort_data", schema, scale);
+            });
         } catch (IOException e) {
             throw new SafeRuntimeException("IOException while setting up gensort binary", e);
         } finally {
@@ -106,47 +141,49 @@ public final class GenSortDataGenerator implements SortDataGenerator {
         }
     }
 
-    private void generateData(Path dataDir, int scale, Path genSortBinaryPath) {
-        Process gensortProcess;
-        try {
-            gensortProcess = new ProcessBuilder()
-                    .command(
-                            genSortBinaryPath.toFile().getAbsolutePath(),
-                            "-a",
-                            Long.toString(estimateNumRecords(scale)),
-                            dataDir.resolve(GENERATED_DATA_FILE_NAME + ".csv")
-                                    .toAbsolutePath()
-                                    .toString())
-                    .inheritIO()
-                    .directory(genSortBinaryPath.toFile().getParentFile())
-                    .start();
-        } catch (IOException e) {
-            throw new SafeRuntimeException("IOException while running gensort program", e);
-        }
+    private ListenableFuture<?> generateData(
+            Path dataDir, int scale, long partitionIndex, long totalNumRecords, Path genSortBinaryPath) {
+        return dataGeneratorThreadPool.submit(() -> {
+            Process gensortProcess;
+            try {
+                String[] command = {
+                    genSortBinaryPath.toFile().getAbsolutePath(),
+                    "-b" + partitionIndex * RECORDS_PER_CHUNK,
+                    "-a",
+                    Long.toString(Math.min(RECORDS_PER_CHUNK, totalNumRecords)),
+                    dataDir.resolve(GENERATED_DATA_FILE_NAME + "_" + partitionIndex + ".csv")
+                            .toAbsolutePath()
+                            .toString()
+                };
+                gensortProcess = new ProcessBuilder()
+                        .command(command)
+                        .inheritIO()
+                        .directory(genSortBinaryPath.toFile().getParentFile())
+                        .start();
+            } catch (IOException e) {
+                throw new SafeRuntimeException("IOException while running gensort program", e);
+            }
 
-        int returnCode;
-        try {
-            returnCode = gensortProcess.waitFor();
-        } catch (InterruptedException e) {
-            throw new SafeRuntimeException("Thread was interrupted while waiting for gensort process", e);
-        }
-        if (returnCode != 0) {
-            throw new IllegalStateException(String.format("genSort failed with return code %d", returnCode));
-        }
-        log.info("Finished running gensort");
-        DataGenUtils.uploadFiles(
-                destinationFileSystem, paths.csvDir(scale), dataDir.toFile(), MoreExecutors.newDirectExecutorService());
-        StructType schema = DataTypes.createStructType(
-                ImmutableList.of(DataTypes.createStructField("record", DataTypes.StringType, false)));
-        String destinationPath =
-                Paths.get(paths.parquetDir(scale), GENERATED_DATA_FILE_NAME).toString();
-        parquetTransformer.transform(
-                spark, schema, paths.tableCsvFile(scale, GENERATED_DATA_FILE_NAME), destinationPath, "\n");
-        registration.registerTable("gensort_data", schema, scale);
+            int returnCode;
+            try {
+                returnCode = gensortProcess.waitFor();
+            } catch (InterruptedException e) {
+                throw new SafeRuntimeException("Thread was interrupted while waiting for gensort process", e);
+            }
+            if (returnCode != 0) {
+                throw new IllegalStateException(String.format("genSort failed with return code %d", returnCode));
+            }
+            log.info("Finished running gensort");
+            DataGenUtils.uploadFiles(
+                    destinationFileSystem,
+                    paths.csvDir(scale),
+                    dataDir.toFile(),
+                    MoreExecutors.newDirectExecutorService());
+        });
     }
 
-    private int estimateNumRecords(int scale) {
-        return (scale * 1024 * 1024) / BYTES_PER_RECORD;
+    private long estimateNumRecords(int scale) {
+        return (scale * 1024 * 1024 * 1024) / BYTES_PER_RECORD;
     }
 
     private Path extractBinary() throws IOException {

@@ -16,6 +16,8 @@
 
 package com.palantir.spark.tpcds.datagen;
 
+import java.util.Optional;
+import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -24,13 +26,22 @@ import org.apache.spark.sql.types.StructType;
 public final class DefaultParquetTransformer implements ParquetTransformer {
     @Override
     public void transform(
-            SparkSession sparkSession, StructType schema, String sourcePath, String destinationPath, String delimiter) {
-        Dataset<Row> tableDataset = sparkSession
-                .read()
-                .format("csv")
-                .option("delimiter", delimiter)
-                .schema(schema)
-                .load(sourcePath);
-        tableDataset.write().format("parquet").save(destinationPath);
+            SparkSession sparkSession,
+            StructType schema,
+            Set<String> sourcePaths,
+            String destinationPath,
+            String delimiter) {
+        Optional<Dataset<Row>> unioned = sourcePaths.stream()
+                .map(path -> sparkSession
+                        .read()
+                        .format("csv")
+                        .option("delimiter", delimiter)
+                        .schema(schema)
+                        .load(path))
+                .reduce(Dataset::union);
+        if (!unioned.isPresent()) {
+            return;
+        }
+        unioned.get().write().format("parquet").save(destinationPath);
     }
 }
