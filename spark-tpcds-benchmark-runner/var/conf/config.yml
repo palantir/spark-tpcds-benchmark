@@ -32,6 +32,7 @@ spark:
   master: local[4]
   sparkConf:
     spark.yarn.jars: service/lib/*
+    spark.sql.adaptive.enabled: true
 testDataDir: test_data
 iterations: 1
 #excludeSqlQueries: false

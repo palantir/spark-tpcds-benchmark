@@ -1,0 +1,8 @@
+type: improvement
+improvement:
+  description: |-
+    Turn on AQE for better partitioning
+
+    Downside is that this will also apply to the queries - I can refactor the code to take different spark configs for those if needed, but if we run the queries enough times, we should be able to account for any differences because of the non determinism?
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/191
