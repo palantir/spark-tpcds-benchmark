@@ -48,7 +48,8 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     private static final Logger log = LoggerFactory.getLogger(GenSortDataGenerator.class);
 
     private static final int BYTES_PER_RECORD = 100;
-    private static final long PARTITION_SIZE = 1024 * 1024 * 1024; // 1GB
+    private static final long BYTES_PER_GB = 1024 * 1024 * 1024;
+    private static final long PARTITION_SIZE = BYTES_PER_GB; // 1GB
     private static final long RECORDS_PER_CHUNK = PARTITION_SIZE / BYTES_PER_RECORD;
 
     private static final Path GEN_SORT_MACOS_PATH = Paths.get("service", "bin", "gensort", "gensort_osx");
@@ -183,7 +184,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     }
 
     private long estimateNumRecords(int scale) {
-        return (scale * 1024 * 1024 * 1024) / BYTES_PER_RECORD;
+        return (scale * BYTES_PER_GB) / BYTES_PER_RECORD;
     }
 
     private Path extractBinary() throws IOException {
