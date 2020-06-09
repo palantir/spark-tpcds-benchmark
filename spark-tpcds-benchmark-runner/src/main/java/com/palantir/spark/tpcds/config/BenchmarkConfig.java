@@ -16,6 +16,7 @@
 
 package com.palantir.spark.tpcds.config;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -25,6 +26,7 @@ import com.palantir.logsafe.Preconditions;
 import com.palantir.spark.tpcds.immutables.ImmutablesConfigStyle;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import org.immutables.value.Value;
 
@@ -40,7 +42,13 @@ public interface BenchmarkConfig {
 
     Path dsdgenWorkLocalDir();
 
-    String testDataDir();
+    @JsonProperty("testDataDir")
+    String testDataDirRaw();
+
+    @Value.Derived
+    default org.apache.hadoop.fs.Path testDataDir() {
+        return new org.apache.hadoop.fs.Path(hadoop().defaultFsUri(), testDataDirRaw());
+    }
 
     boolean generateData();
 
@@ -75,6 +83,8 @@ public interface BenchmarkConfig {
         dataScalesGb().forEach(scale -> {
             Preconditions.checkArgument(scale > 0, "All data scales must be positive.");
         });
+        Preconditions.checkArgument(
+                !Paths.get(testDataDirRaw()).isAbsolute(), "Must specify a relative path for testDataDir");
     }
 
     static BenchmarkConfig parse(Path configFile) throws IOException {

@@ -52,8 +52,7 @@ public final class BenchmarkRunner {
         }
         BenchmarkConfig config = BenchmarkConfig.parse(configFile);
         Configuration hadoopConf = config.hadoop().toHadoopConf();
-        try (FileSystem dataFileSystem =
-                FileSystem.get(new org.apache.hadoop.fs.Path(config.testDataDir()).toUri(), hadoopConf)) {
+        try (FileSystem dataFileSystem = FileSystem.get(config.testDataDir().toUri(), hadoopConf)) {
             SparkConf sparkConf = new SparkConf().setMaster(config.spark().master());
             config.spark().sparkConf().forEach(sparkConf::set);
             hadoopConf.forEach(confEntry ->
@@ -70,7 +69,7 @@ public final class BenchmarkRunner {
             }
 
             SparkSession spark = SparkSession.builder().config(sparkConf).getOrCreate();
-            BenchmarkPaths paths = new BenchmarkPaths(config.testDataDir());
+            BenchmarkPaths paths = new BenchmarkPaths(config.testDataDir().toString());
             Schemas schemas = new Schemas();
             TableRegistration registration = new TableRegistration(paths, dataFileSystem, spark, schemas);
             ExecutorService dataGeneratorThreadPool = Executors.newFixedThreadPool(

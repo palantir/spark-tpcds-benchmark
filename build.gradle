@@ -74,5 +74,5 @@ configure(subprojects) {
     }
 
     tasks.check.dependsOn(javadoc)
-    sourceCompatibility = 1.8
+    sourceCompatibility = 11
 }
