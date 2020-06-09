@@ -17,6 +17,9 @@
 package com.palantir.spark.tpcds.config;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.palantir.common.streams.KeyedStream;
+import com.palantir.logsafe.SafeArg;
+import com.palantir.logsafe.exceptions.SafeIllegalArgumentException;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.spark.tpcds.immutables.ImmutablesConfigStyle;
 import java.io.File;
@@ -26,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.immutables.value.Value;
 
 @Value.Immutable
@@ -36,9 +40,24 @@ public interface HadoopConfiguration {
 
     Map<String, String> hadoopConf();
 
+    String defaultFilesystem();
+
+    Map<String, FilesystemConfiguration> filesystems();
+
+    @Value.Derived
+    default String defaultFsUri() {
+        return Optional.ofNullable(filesystems().get(defaultFilesystem()))
+                .orElseThrow(() -> new SafeIllegalArgumentException(
+                        "Specified defaultFilesystem is not configured",
+                        SafeArg.of("defaultFilesystem", defaultFilesystem())))
+                .baseUri();
+    }
+
     @Value.Derived
     default Configuration toHadoopConf() {
         Configuration hadoopConf = new Configuration();
+
+        // first load the values from xml in the provided directories
         for (Path hadoopConfDir : hadoopConfDirs()) {
             try {
                 hadoopConf = loadConfFromFile(hadoopConf, hadoopConfDir.toFile());
@@ -46,7 +65,16 @@ public interface HadoopConfiguration {
                 throw new SafeRuntimeException("Malformed URL when parsing Hadoop config", e);
             }
         }
+
+        // then load the free-form config overrides
         hadoopConf().forEach(hadoopConf::set);
+
+        // finally, apply the filesystem settings
+        KeyedStream.ofEntries(
+                        filesystems().values().stream().flatMap(fsConf -> fsConf.toHadoopConf().entrySet().stream()))
+                .collectToMap()
+                .forEach(hadoopConf::set);
+        hadoopConf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, defaultFsUri());
         return hadoopConf;
     }
 
@@ -57,7 +85,7 @@ public interface HadoopConfiguration {
                 resolvedConfiguration = loadConfFromFile(resolvedConfiguration, child);
             }
         } else if (confFile.isFile() && confFile.getName().endsWith(".xml")) {
-            resolvedConfiguration.addResource(confFile.toURL());
+            resolvedConfiguration.addResource(confFile.toURI().toURL());
         }
         return resolvedConfiguration;
     }
