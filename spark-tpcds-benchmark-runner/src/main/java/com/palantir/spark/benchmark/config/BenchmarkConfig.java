@@ -43,11 +43,11 @@ public interface BenchmarkConfig {
     Path dsdgenWorkLocalDir();
 
     @JsonProperty("testDataDir")
-    String testDataDirRaw();
+    String testDataDirectoryRaw();
 
     @Value.Derived
-    default org.apache.hadoop.fs.Path testDataDir() {
-        return new org.apache.hadoop.fs.Path(hadoop().defaultFsUri(), testDataDirRaw());
+    default org.apache.hadoop.fs.Path testDataDirectory() {
+        return new org.apache.hadoop.fs.Path(hadoop().defaultFsUri(), testDataDirectoryRaw());
     }
 
     boolean generateData();
@@ -84,7 +84,7 @@ public interface BenchmarkConfig {
             Preconditions.checkArgument(scale > 0, "All data scales must be positive.");
         });
         Preconditions.checkArgument(
-                !Paths.get(testDataDirRaw()).isAbsolute(), "Must specify a relative path for testDataDir");
+                !Paths.get(testDataDirectoryRaw()).isAbsolute(), "Must specify a relative path for testDataDir");
     }
 
     static BenchmarkConfig parse(Path configFile) throws IOException {
