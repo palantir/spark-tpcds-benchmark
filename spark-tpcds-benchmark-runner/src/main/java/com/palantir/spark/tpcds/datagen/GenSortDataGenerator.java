@@ -69,7 +69,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     private final BenchmarkPaths paths;
     private final TableRegistration registration;
     private final Path tempWorkingDir;
-    private final List<ScaleAndRecords> scaleAndRecords;
+    private final List<ScaleAndRecords> scalesAndRecords;
     private final ListeningExecutorService dataGeneratorThreadPool;
 
     public GenSortDataGenerator(
@@ -87,7 +87,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
         this.paths = paths;
         this.registration = registration;
         this.tempWorkingDir = tempWorkingDir;
-        this.scaleAndRecords = scales.stream()
+        this.scalesAndRecords = scales.stream()
                 .map(scale -> ScaleAndRecords.builder()
                         .scale(scale)
                         .numRecords(estimateNumRecords(scale))
@@ -99,7 +99,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     // We'd like to generate fewer than 1GB of records for tests.
     @VisibleForTesting
     GenSortDataGenerator(
-            List<ScaleAndRecords> scaleAndRecords,
+            List<ScaleAndRecords> scalesAndRecords,
             SparkSession spark,
             FileSystem destinationFileSystem,
             ParquetTransformer parquetTransformer,
@@ -113,7 +113,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
         this.paths = paths;
         this.registration = registration;
         this.tempWorkingDir = tempWorkingDir;
-        this.scaleAndRecords = scaleAndRecords;
+        this.scalesAndRecords = scalesAndRecords;
         this.dataGeneratorThreadPool = MoreExecutors.listeningDecorator(dataGeneratorThreadPool);
     }
 
@@ -133,7 +133,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             log.info("Extracted gensort binary: {}", SafeArg.of("genSortBinaryPath", genSortBinaryPath));
             Path dataDir = Files.createDirectory(tempWorkingDir.resolve(GENSORT_DATA_DIR_NAME));
 
-            scaleAndRecords.forEach(scaleAndRecords -> {
+            scalesAndRecords.forEach(scaleAndRecords -> {
                 int scale = scaleAndRecords.scale();
                 long totalNumRecords = scaleAndRecords.numRecords();
 
