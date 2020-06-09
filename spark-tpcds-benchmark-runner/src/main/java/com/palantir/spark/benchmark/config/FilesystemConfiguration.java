@@ -16,6 +16,7 @@
 
 package com.palantir.spark.benchmark.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -27,6 +28,7 @@ import java.util.Map;
     @JsonSubTypes.Type(value = S3Configuration.class, name = FilesystemConfiguration.AMAZON_S3_TYPE),
     @JsonSubTypes.Type(value = AzureBlobStoreConfiguration.class, name = FilesystemConfiguration.AZURE_BLOB_STORE)
 })
+@JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class FilesystemConfiguration {
     public static final String SIMPLE_TYPE = "simple";
     public static final String AMAZON_S3_TYPE = "s3a";
