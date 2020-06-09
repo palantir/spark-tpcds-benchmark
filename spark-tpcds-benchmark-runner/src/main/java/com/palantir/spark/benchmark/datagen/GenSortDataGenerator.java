@@ -146,6 +146,12 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                         .collect(Collectors.toList()) // Always collect to force kick off all tasks
                         .forEach(MoreFutures::join);
 
+                DataGenUtils.uploadFiles(
+                        destinationFileSystem,
+                        paths.csvDir(scale),
+                        dataDir.toFile(),
+                        MoreExecutors.newDirectExecutorService());
+
                 StructType schema = DataTypes.createStructType(
                         ImmutableList.of(DataTypes.createStructField("record", DataTypes.StringType, false)));
                 String destinationPath = Paths.get(paths.parquetDir(scale), GENERATED_DATA_FILE_NAME)
@@ -209,11 +215,6 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                     "Finished running gensort for scale {} and partition {}",
                     SafeArg.of("scale", scale),
                     SafeArg.of("partitionIndex", partitionIndex));
-            DataGenUtils.uploadFiles(
-                    destinationFileSystem,
-                    paths.csvDir(scale),
-                    dataDir.toFile(),
-                    MoreExecutors.newDirectExecutorService());
         });
     }
 
