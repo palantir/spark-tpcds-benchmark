@@ -50,7 +50,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     private static final int BYTES_PER_RECORD = 100;
     private static final long BYTES_PER_GB = 1024 * 1024 * 1024;
     private static final long PARTITION_SIZE = BYTES_PER_GB; // 1GB
-    private static final long RECORDS_PER_CHUNK = PARTITION_SIZE / BYTES_PER_RECORD;
+    private static final long RECORDS_PER_PARTITION = PARTITION_SIZE / BYTES_PER_RECORD;
 
     private static final Path GEN_SORT_MACOS_PATH = Paths.get("service", "bin", "gensort", "gensort_osx");
     private static final Path GENSORT_TGZ_LINUX_PATH =
@@ -110,7 +110,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
 
                 // We are estimating the number of records anyway, so it's fine if we generate an extra partition
                 // in some cases.
-                long numberOfPartitions = (totalNumRecords / RECORDS_PER_CHUNK) + 1;
+                long numberOfPartitions = (totalNumRecords / RECORDS_PER_PARTITION) + 1;
                 LongStream.range(0, numberOfPartitions)
                         .mapToObj(partitionIndex ->
                                 generateData(dataDir, scale, partitionIndex, totalNumRecords, genSortBinaryPath))
@@ -149,9 +149,9 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             try {
                 String[] command = {
                     genSortBinaryPath.toFile().getAbsolutePath(),
-                    "-b" + partitionIndex * RECORDS_PER_CHUNK,
+                    "-b" + partitionIndex * RECORDS_PER_PARTITION,
                     "-a",
-                    Long.toString(Math.min(RECORDS_PER_CHUNK, totalNumRecords)),
+                    Long.toString(Math.min(RECORDS_PER_PARTITION, totalNumRecords)),
                     dataDir.resolve(GENERATED_DATA_FILE_NAME + "_" + partitionIndex + ".csv")
                             .toAbsolutePath()
                             .toString()
@@ -174,7 +174,10 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             if (returnCode != 0) {
                 throw new IllegalStateException(String.format("genSort failed with return code %d", returnCode));
             }
-            log.info("Finished running gensort");
+            log.info(
+                    "Finished running gensort for scale {} and partition {}",
+                    SafeArg.of("scale", scale),
+                    SafeArg.of("partitionIndex", partitionIndex));
             DataGenUtils.uploadFiles(
                     destinationFileSystem,
                     paths.csvDir(scale),
