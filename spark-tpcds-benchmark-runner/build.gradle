@@ -44,7 +44,7 @@ dependencies {
 
 distribution {
     serviceName project.name
-    mainClass 'com.palantir.spark.tpcds.TpcdsBenchmarkRunner'
+    mainClass 'com.palantir.spark.benchmark.BenchmarkRunner'
     manifestExtensions 'upgrade-strategy': 'shutdown'
     manifestExtensions 'public-proxy-endpoints': []
 }
