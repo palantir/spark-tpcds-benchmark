@@ -16,6 +16,7 @@
 
 package com.palantir.spark.tpcds.datagen;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -41,6 +42,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
+import org.immutables.value.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +69,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     private final BenchmarkPaths paths;
     private final TableRegistration registration;
     private final Path tempWorkingDir;
-    private final List<Integer> scales;
+    private final List<ScaleAndRecords> scaleAndRecords;
     private final ListeningExecutorService dataGeneratorThreadPool;
 
     public GenSortDataGenerator(
@@ -85,7 +87,33 @@ public final class GenSortDataGenerator implements SortDataGenerator {
         this.paths = paths;
         this.registration = registration;
         this.tempWorkingDir = tempWorkingDir;
-        this.scales = scales;
+        this.scaleAndRecords = scales.stream()
+                .map(scale -> ScaleAndRecords.builder()
+                        .scale(scale)
+                        .numRecords(estimateNumRecords(scale))
+                        .build())
+                .collect(Collectors.toList());
+        this.dataGeneratorThreadPool = MoreExecutors.listeningDecorator(dataGeneratorThreadPool);
+    }
+
+    // We'd like to generate fewer than 1GB of records for tests.
+    @VisibleForTesting
+    GenSortDataGenerator(
+            List<ScaleAndRecords> scaleAndRecords,
+            SparkSession spark,
+            FileSystem destinationFileSystem,
+            ParquetTransformer parquetTransformer,
+            BenchmarkPaths paths,
+            TableRegistration registration,
+            Path tempWorkingDir,
+            ExecutorService dataGeneratorThreadPool) {
+        this.spark = spark;
+        this.destinationFileSystem = destinationFileSystem;
+        this.parquetTransformer = parquetTransformer;
+        this.paths = paths;
+        this.registration = registration;
+        this.tempWorkingDir = tempWorkingDir;
+        this.scaleAndRecords = scaleAndRecords;
         this.dataGeneratorThreadPool = MoreExecutors.listeningDecorator(dataGeneratorThreadPool);
     }
 
@@ -105,15 +133,16 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             log.info("Extracted gensort binary: {}", SafeArg.of("genSortBinaryPath", genSortBinaryPath));
             Path dataDir = Files.createDirectory(tempWorkingDir.resolve(GENSORT_DATA_DIR_NAME));
 
-            scales.forEach(scale -> {
-                long totalNumRecords = estimateNumRecords(scale);
+            scaleAndRecords.forEach(scaleAndRecords -> {
+                int scale = scaleAndRecords.scale();
+                long totalNumRecords = scaleAndRecords.numRecords();
 
                 // We are estimating the number of records anyway, so it's fine if we generate an extra partition
                 // in some cases.
                 long numberOfPartitions = (totalNumRecords / RECORDS_PER_PARTITION) + 1;
                 LongStream.range(0, numberOfPartitions)
                         .mapToObj(partitionIndex ->
-                                generateData(dataDir, scale, partitionIndex, totalNumRecords, genSortBinaryPath))
+                                generateData(dataDir, scaleAndRecords, partitionIndex, genSortBinaryPath))
                         .collect(Collectors.toList()) // Always collect to force kick off all tasks
                         .forEach(MoreFutures::join);
 
@@ -143,7 +172,9 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     }
 
     private ListenableFuture<?> generateData(
-            Path dataDir, int scale, long partitionIndex, long totalNumRecords, Path genSortBinaryPath) {
+            Path dataDir, ScaleAndRecords scaleAndRecords, long partitionIndex, Path genSortBinaryPath) {
+        int scale = scaleAndRecords.scale();
+        long totalNumRecords = scaleAndRecords.numRecords();
         return dataGeneratorThreadPool.submit(() -> {
             Process gensortProcess;
             try {
@@ -207,5 +238,18 @@ public final class GenSortDataGenerator implements SortDataGenerator {
 
         DataGenUtils.makeFileExecutable(binaryPath);
         return binaryPath;
+    }
+
+    @Value.Immutable
+    public interface ScaleAndRecords {
+        int scale();
+
+        long numRecords();
+
+        class Builder extends ImmutableScaleAndRecords.Builder {}
+
+        static Builder builder() {
+            return new Builder();
+        }
     }
 }
