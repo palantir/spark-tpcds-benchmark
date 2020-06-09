@@ -40,6 +40,10 @@ public final class BenchmarkPaths {
         return String.join(File.separator, csvDir(scale), String.format("%s.csv", tableName));
     }
 
+    public String tableCsvFile(int scale, String tableName, long partitionIndex) {
+        return String.join(File.separator, csvDir(scale), String.format("%s_%s.csv", tableName, partitionIndex));
+    }
+
     public String tableParquetLocation(int scale, TpcdsTable table) {
         return tableParquetLocation(scale, table.tableName());
     }

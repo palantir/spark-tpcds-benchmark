@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-package com.palantir.spark.benchmark;
+package com.palantir.spark.tpcds.datagen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.palantir.spark.tpcds.datagen.ParquetTransformer;
-import com.palantir.spark.tpcds.datagen.TpcdsDataGenerator;
 import com.palantir.spark.tpcds.paths.BenchmarkPaths;
 import com.palantir.spark.tpcds.schemas.Schemas;
 import java.net.URI;

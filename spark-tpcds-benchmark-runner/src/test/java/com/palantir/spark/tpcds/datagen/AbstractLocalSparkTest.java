@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.palantir.spark.benchmark;
+package com.palantir.spark.tpcds.datagen;
 
 import com.palantir.spark.tpcds.config.HadoopConfiguration;
 import com.palantir.spark.tpcds.config.SimpleFilesystemConfiguration;

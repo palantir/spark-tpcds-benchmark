@@ -16,6 +16,7 @@
 
 package com.palantir.spark.tpcds.datagen;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -24,6 +25,7 @@ import com.palantir.spark.tpcds.constants.TpcdsTable;
 import com.palantir.spark.tpcds.paths.BenchmarkPaths;
 import com.palantir.spark.tpcds.schemas.Schemas;
 import com.palantir.spark.tpcds.util.DataGenUtils;
+import com.palantir.spark.tpcds.util.MoreFutures;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -31,7 +33,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -96,7 +97,7 @@ public final class TpcdsDataGenerator {
             dataScalesGb.stream()
                     .map(scale -> generateAndUploadDataForScale(scale, tempDir, dsdgenFile))
                     .collect(Collectors.toList()) // Always collect to force kick off all tasks
-                    .forEach(TpcdsDataGenerator::waitForFuture);
+                    .forEach(MoreFutures::join);
         } catch (Exception e) {
             try {
                 dataGeneratorThreadPool.shutdownNow();
@@ -193,7 +194,7 @@ public final class TpcdsDataGenerator {
                         parquetTransformer.transform(
                                 spark,
                                 schemas.getSchema(table),
-                                paths.tableCsvFile(scale, table),
+                                ImmutableSet.of(paths.tableCsvFile(scale, table)),
                                 paths.tableParquetLocation(scale, table),
                                 "|");
                     });
@@ -208,7 +209,7 @@ public final class TpcdsDataGenerator {
                     return saveAsParquetTask;
                 })
                 .collect(Collectors.toList())
-                .forEach(TpcdsDataGenerator::waitForFuture);
+                .forEach(MoreFutures::join);
     }
 
     private Path extractTpcdsBinary(Path tempDir) throws IOException {
@@ -234,13 +235,5 @@ public final class TpcdsDataGenerator {
                     dsdgenTgzPath));
         }
         return dsdgenTgzPath;
-    }
-
-    private static void waitForFuture(ListenableFuture<?> future) {
-        try {
-            future.get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

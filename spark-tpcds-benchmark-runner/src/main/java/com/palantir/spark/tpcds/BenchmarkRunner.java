@@ -96,7 +96,8 @@ public final class BenchmarkRunner {
                     paths,
                     registration,
                     config.dsdgenWorkLocalDir(),
-                    config.dataScalesGb());
+                    config.dataScalesGb(),
+                    dataGeneratorThreadPool);
             TpcdsQueryCorrectnessChecks correctness = new TpcdsQueryCorrectnessChecks(paths, dataFileSystem, spark);
             BenchmarkMetrics metrics = new BenchmarkMetrics(config, paths, spark);
             new Benchmark(

@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.palantir.spark.benchmark;
+package com.palantir.spark.tpcds.datagen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableList;
-import com.palantir.spark.tpcds.datagen.DefaultParquetTransformer;
-import com.palantir.spark.tpcds.datagen.GenSortDataGenerator;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.palantir.spark.tpcds.datagen.GenSortDataGenerator.ScaleAndRecords;
 import com.palantir.spark.tpcds.paths.BenchmarkPaths;
 import com.palantir.spark.tpcds.queries.SortBenchmarkQuery;
 import com.palantir.spark.tpcds.registration.TableRegistration;
@@ -40,6 +40,7 @@ public final class GenSortTest extends AbstractLocalSparkTest {
         Path workingDir = createTemporaryWorkingDir("working_dir");
         Path destinationDataDirectory = createTemporaryWorkingDir("data");
         int scale = 1;
+        int numRecords = 100;
 
         String fullyQualifiedDestinationDir =
                 "file://" + destinationDataDirectory.toFile().getAbsolutePath();
@@ -49,17 +50,21 @@ public final class GenSortTest extends AbstractLocalSparkTest {
         BenchmarkPaths paths =
                 new BenchmarkPaths(destinationDataDirectory.toFile().getAbsolutePath());
         GenSortDataGenerator genSortDataGenerator = new GenSortDataGenerator(
+                ImmutableList.of(ScaleAndRecords.builder()
+                        .scale(scale)
+                        .numRecords(numRecords)
+                        .build()),
                 sparkSession,
                 dataFileSystem,
                 new DefaultParquetTransformer(), // test that our schema works by copying for real.
                 paths,
                 new TableRegistration(paths, dataFileSystem, sparkSession, new Schemas()),
                 workingDir,
-                ImmutableList.of(scale));
+                MoreExecutors.newDirectExecutorService());
         genSortDataGenerator.generate();
 
-        List<String> generatedLines = read(Paths.get(paths.tableCsvFile(scale, "gensort_data")), "csv");
-        assertThat(generatedLines).hasSize(10485); // (1GB / 100 bytes)
+        List<String> generatedLines = read(Paths.get(paths.tableCsvFile(scale, "gensort_data", 0)), "csv");
+        assertThat(generatedLines).hasSize(numRecords);
 
         List<String> copiedParquet = read(Paths.get(paths.tableParquetLocation(scale, "gensort_data")), "parquet");
         assertThat(copiedParquet).hasSameElementsAs(generatedLines);
