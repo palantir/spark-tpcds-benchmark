@@ -147,10 +147,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                         .forEach(MoreFutures::join);
 
                 DataGenUtils.uploadFiles(
-                        destinationFileSystem,
-                        paths.csvDir(scale),
-                        dataDir.toFile(),
-                        MoreExecutors.newDirectExecutorService());
+                        destinationFileSystem, paths.csvDir(scale), dataDir.toFile(), dataGeneratorThreadPool);
 
                 StructType schema = DataTypes.createStructType(
                         ImmutableList.of(DataTypes.createStructField("record", DataTypes.StringType, false)));
