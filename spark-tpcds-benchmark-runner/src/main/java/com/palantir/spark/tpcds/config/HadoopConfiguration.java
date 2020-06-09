@@ -41,14 +41,11 @@ public interface HadoopConfiguration {
 
     Map<String, String> hadoopConf();
 
+    String defaultFilesystem();
+
     @Value.Default
     default Map<String, FilesystemConfiguration> filesystems() {
         return ImmutableMap.of("local", SimpleFilesystemConfiguration.of("file:///tmp/spark-benchmark"));
-    }
-
-    @Value.Default
-    default String defaultFilesystem() {
-        return "local";
     }
 
     @Value.Derived

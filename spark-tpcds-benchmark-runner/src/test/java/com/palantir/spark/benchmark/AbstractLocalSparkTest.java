@@ -27,7 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 
 public abstract class AbstractLocalSparkTest {
     static final HadoopConfiguration TEST_HADOOP_CONFIGURATION =
-            HadoopConfiguration.builder().build();
+            HadoopConfiguration.builder().defaultFilesystem("local").build();
 
     SparkSession sparkSession;
 

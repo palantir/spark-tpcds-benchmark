@@ -6,6 +6,7 @@ generateData: true
 hadoop:
   hadoopConfDirs: []
   hadoopConf: {}
+  defaultFilesystem: local
   filesystems:
     local:
       type: simple
@@ -22,7 +23,6 @@ hadoop:
       type: azure
       accountName: MY_ACCOUNT_NAME
       accessKey: MY_ACCESS_KEY
-  defaultFilesystem: local
 overwriteData: false
 spark:
   #executorCores: 1
@@ -35,4 +35,3 @@ spark:
     spark.sql.adaptive.enabled: true
 testDataDir: test_data
 iterations: 1
-#excludeSqlQueries: false
