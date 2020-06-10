@@ -21,7 +21,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.palantir.logsafe.SafeArg;
-import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.spark.benchmark.constants.TpcdsTable;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.schemas.Schemas;
@@ -134,7 +133,7 @@ public final class TpcdsDataGenerator {
     private void generateAndUploadCsv(int scale, Path tempDir, Path resolvedDsdgenFile)
             throws IOException, InterruptedException {
         org.apache.hadoop.fs.Path rootDataPath = new org.apache.hadoop.fs.Path(paths.csvDir(scale));
-        if (!shouldGenerateData(scale, rootDataPath)) {
+        if (!DataGenUtils.shouldWriteData(destinationFileSystem, scale, rootDataPath, shouldOverwriteData)) {
             return;
         }
         File tpcdsTempDir = new File(tempDir.resolve("tpcds-data").toFile(), Integer.toString(scale));
@@ -185,7 +184,8 @@ public final class TpcdsDataGenerator {
                     String tableParquetLocation = paths.tableParquetLocation(scale, table);
                     org.apache.hadoop.fs.Path tableParquetLocationPath =
                             new org.apache.hadoop.fs.Path(tableParquetLocation);
-                    return shouldGenerateData(scale, tableParquetLocationPath);
+                    return DataGenUtils.shouldWriteData(
+                            destinationFileSystem, scale, tableParquetLocationPath, shouldOverwriteData);
                 })
                 .map(table -> {
                     ListenableFuture<?> saveAsParquetTask = dataGeneratorThreadPool.submit(() -> {
@@ -206,27 +206,6 @@ public final class TpcdsDataGenerator {
                 })
                 .collect(Collectors.toList())
                 .forEach(MoreFutures::join);
-    }
-
-    private boolean shouldGenerateData(int scale, org.apache.hadoop.fs.Path destinationPath) {
-        try {
-            if (!destinationFileSystem.exists(destinationPath) || shouldOverwriteData) {
-                if (destinationFileSystem.isDirectory(destinationPath)
-                        && !destinationFileSystem.delete(destinationPath, true)) {
-                    throw new IllegalStateException(
-                            String.format("Failed to clear data file directory at %s.", destinationPath));
-                }
-            } else {
-                log.info(
-                        "Not overwriting data at path {} for the given scale of {}.",
-                        SafeArg.of("dataPath", destinationPath),
-                        SafeArg.of("dataScale", scale));
-                return false;
-            }
-        } catch (IOException e) {
-            throw new SafeRuntimeException(e);
-        }
-        return true;
     }
 
     private Path extractTpcdsBinary(Path tempDir) throws IOException {
