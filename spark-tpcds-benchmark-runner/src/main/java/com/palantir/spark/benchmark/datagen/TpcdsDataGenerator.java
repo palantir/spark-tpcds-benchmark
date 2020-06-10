@@ -21,6 +21,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.palantir.logsafe.SafeArg;
+import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.spark.benchmark.constants.TpcdsTable;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.schemas.Schemas;
@@ -133,16 +134,7 @@ public final class TpcdsDataGenerator {
     private void generateAndUploadCsv(int scale, Path tempDir, Path resolvedDsdgenFile)
             throws IOException, InterruptedException {
         org.apache.hadoop.fs.Path rootDataPath = new org.apache.hadoop.fs.Path(paths.csvDir(scale));
-        if (!destinationFileSystem.exists(rootDataPath) || shouldOverwriteData) {
-            if (destinationFileSystem.isDirectory(rootDataPath) && !destinationFileSystem.delete(rootDataPath, true)) {
-                throw new IllegalStateException(
-                        String.format("Failed to clear data file directory at %s.", rootDataPath));
-            }
-        } else {
-            log.info(
-                    "Not overwriting data at path {} for the given scale of {}.",
-                    SafeArg.of("dataPath", rootDataPath),
-                    SafeArg.of("dataScale", scale));
+        if (!shouldGenerateData(scale, rootDataPath)) {
             return;
         }
         File tpcdsTempDir = new File(tempDir.resolve("tpcds-data").toFile(), Integer.toString(scale));
@@ -189,6 +181,12 @@ public final class TpcdsDataGenerator {
 
     private void saveTablesAsParquet(int scale) {
         Stream.of(TpcdsTable.values())
+                .filter(table -> {
+                    String tableParquetLocation = paths.tableParquetLocation(scale, table);
+                    org.apache.hadoop.fs.Path tableParquetLocationPath =
+                            new org.apache.hadoop.fs.Path(tableParquetLocation);
+                    return shouldGenerateData(scale, tableParquetLocationPath);
+                })
                 .map(table -> {
                     ListenableFuture<?> saveAsParquetTask = dataGeneratorThreadPool.submit(() -> {
                         parquetTransformer.transform(
@@ -199,17 +197,36 @@ public final class TpcdsDataGenerator {
                                 "|");
                     });
                     saveAsParquetTask.addListener(
-                            () -> {
-                                log.info(
-                                        "Saved a table {} as parquet at scale {}.",
-                                        SafeArg.of("table", table),
-                                        SafeArg.of("scale", scale));
-                            },
+                            () -> log.info(
+                                    "Saved a table {} as parquet at scale {}.",
+                                    SafeArg.of("table", table),
+                                    SafeArg.of("scale", scale)),
                             dataGeneratorThreadPool);
                     return saveAsParquetTask;
                 })
                 .collect(Collectors.toList())
                 .forEach(MoreFutures::join);
+    }
+
+    private boolean shouldGenerateData(int scale, org.apache.hadoop.fs.Path tableParquetLocationPath) {
+        try {
+            if (!destinationFileSystem.exists(tableParquetLocationPath) || shouldOverwriteData) {
+                if (destinationFileSystem.isDirectory(tableParquetLocationPath)
+                        && !destinationFileSystem.delete(tableParquetLocationPath, true)) {
+                    throw new IllegalStateException(
+                            String.format("Failed to clear data file directory at %s.", tableParquetLocationPath));
+                }
+            } else {
+                log.info(
+                        "Not overwriting data at path {} for the given scale of {}.",
+                        SafeArg.of("dataPath", tableParquetLocationPath),
+                        SafeArg.of("dataScale", scale));
+                return false;
+            }
+        } catch (IOException e) {
+            throw new SafeRuntimeException(e);
+        }
+        return true;
     }
 
     private Path extractTpcdsBinary(Path tempDir) throws IOException {
