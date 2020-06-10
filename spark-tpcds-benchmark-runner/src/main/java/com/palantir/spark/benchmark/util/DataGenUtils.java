@@ -97,11 +97,8 @@ public final class DataGenUtils {
             boolean shouldOverwriteData) {
         try {
             if (!destinationFileSystem.exists(destinationPath) || shouldOverwriteData) {
-                if (destinationFileSystem.isDirectory(destinationPath)
-                        && !destinationFileSystem.delete(destinationPath, true)) {
-                    throw new IllegalStateException(
-                            String.format("Failed to clear data file directory at %s.", destinationPath));
-                }
+                deleteDestinationPathIfNecessary(destinationFileSystem, destinationPath);
+                return true;
             } else {
                 log.info(
                         "Not overwriting data at path {} for the given scale of {}.",
@@ -112,7 +109,15 @@ public final class DataGenUtils {
         } catch (IOException e) {
             throw new SafeRuntimeException(e);
         }
-        return true;
+    }
+
+    private static void deleteDestinationPathIfNecessary(
+            FileSystem destinationFileSystem, org.apache.hadoop.fs.Path destinationPath) throws IOException {
+        if (destinationFileSystem.isDirectory(destinationPath)
+                && !destinationFileSystem.delete(destinationPath, true)) {
+            throw new IllegalStateException(
+                    String.format("Failed to clear data file directory at %s.", destinationPath));
+        }
     }
 
     public static void uploadFiles(
