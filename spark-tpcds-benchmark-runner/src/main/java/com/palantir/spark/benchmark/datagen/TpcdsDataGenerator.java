@@ -117,53 +117,8 @@ public final class TpcdsDataGenerator {
     private ListenableFuture<?> generateAndUploadDataForScale(int scale, Path tempDir, Path resolvedDsdgenFile) {
         ListenableFuture<?> uploadDataForScaleTask = dataGeneratorThreadPool.submit(() -> {
             try {
-                org.apache.hadoop.fs.Path rootDataPath = new org.apache.hadoop.fs.Path(paths.csvDir(scale));
-                if (!destinationFileSystem.exists(rootDataPath) || shouldOverwriteData) {
-                    if (destinationFileSystem.isDirectory(rootDataPath)
-                            && !destinationFileSystem.delete(rootDataPath, true)) {
-                        throw new IllegalStateException(
-                                String.format("Failed to clear data file directory at %s.", rootDataPath));
-                    }
-                } else {
-                    log.info(
-                            "Not overwriting data at path {} for the given scale of {}.",
-                            SafeArg.of("dataPath", rootDataPath),
-                            SafeArg.of("dataScale", scale));
-                    return;
-                }
                 invalidateHashesIfNecessary(scale);
-
-                File tpcdsTempDir = new File(tempDir.resolve("tpcds-data").toFile(), Integer.toString(scale));
-                if (!tpcdsTempDir.mkdirs()) {
-                    throw new IllegalStateException(
-                            String.format("Failed to make tpcds temporary data dir at %s", tpcdsTempDir));
-                }
-                String[] dsdgenCommand = {
-                    resolvedDsdgenFile.toFile().getAbsolutePath(),
-                    "-DIR",
-                    tpcdsTempDir.getAbsolutePath(),
-                    "-SCALE",
-                    Integer.toString(scale),
-                    "-SUFFIX",
-                    ".csv",
-                    "-DELIMITER",
-                    "|"
-                };
-                Process dsdgenProcess = new ProcessBuilder()
-                        .command(dsdgenCommand)
-                        .inheritIO()
-                        .directory(resolvedDsdgenFile.toFile().getParentFile())
-                        .start();
-                int returnCode = dsdgenProcess.waitFor();
-                if (returnCode != 0) {
-                    throw new IllegalStateException(String.format("Dsdgen failed with return code %d", returnCode));
-                }
-                log.info("Finished running dsdgen for data scale {}.", SafeArg.of("scale", scale));
-                log.info(
-                        "Uploading tpcds data from location {}.",
-                        SafeArg.of("localLocation", tpcdsTempDir.getAbsolutePath()));
-                DataGenUtils.uploadFiles(
-                        destinationFileSystem, rootDataPath.toString(), tpcdsTempDir, dataGeneratorThreadPool);
+                generateAndUploadCsv(scale, tempDir, resolvedDsdgenFile);
                 saveTablesAsParquet(scale);
             } catch (InterruptedException | IOException e) {
                 throw new RuntimeException(e);
@@ -173,6 +128,51 @@ public final class TpcdsDataGenerator {
                 () -> log.info("Finished uploading data for data at scale {}.", SafeArg.of("scale", scale)),
                 dataGeneratorThreadPool);
         return uploadDataForScaleTask;
+    }
+
+    private void generateAndUploadCsv(int scale, Path tempDir, Path resolvedDsdgenFile)
+            throws IOException, InterruptedException {
+        org.apache.hadoop.fs.Path rootDataPath = new org.apache.hadoop.fs.Path(paths.csvDir(scale));
+        if (!destinationFileSystem.exists(rootDataPath) || shouldOverwriteData) {
+            if (destinationFileSystem.isDirectory(rootDataPath) && !destinationFileSystem.delete(rootDataPath, true)) {
+                throw new IllegalStateException(
+                        String.format("Failed to clear data file directory at %s.", rootDataPath));
+            }
+        } else {
+            log.info(
+                    "Not overwriting data at path {} for the given scale of {}.",
+                    SafeArg.of("dataPath", rootDataPath),
+                    SafeArg.of("dataScale", scale));
+            return;
+        }
+        File tpcdsTempDir = new File(tempDir.resolve("tpcds-data").toFile(), Integer.toString(scale));
+        if (!tpcdsTempDir.mkdirs()) {
+            throw new IllegalStateException(
+                    String.format("Failed to make tpcds temporary data dir at %s", tpcdsTempDir));
+        }
+        String[] dsdgenCommand = {
+            resolvedDsdgenFile.toFile().getAbsolutePath(),
+            "-DIR",
+            tpcdsTempDir.getAbsolutePath(),
+            "-SCALE",
+            Integer.toString(scale),
+            "-SUFFIX",
+            ".csv",
+            "-DELIMITER",
+            "|"
+        };
+        Process dsdgenProcess = new ProcessBuilder()
+                .command(dsdgenCommand)
+                .inheritIO()
+                .directory(resolvedDsdgenFile.toFile().getParentFile())
+                .start();
+        int returnCode = dsdgenProcess.waitFor();
+        if (returnCode != 0) {
+            throw new IllegalStateException(String.format("Dsdgen failed with return code %d", returnCode));
+        }
+        log.info("Finished running dsdgen for data scale {}.", SafeArg.of("scale", scale));
+        log.info("Uploading tpcds data from location {}.", SafeArg.of("localLocation", tpcdsTempDir.getAbsolutePath()));
+        DataGenUtils.uploadFiles(destinationFileSystem, rootDataPath.toString(), tpcdsTempDir, dataGeneratorThreadPool);
     }
 
     private void invalidateHashesIfNecessary(int scale) throws IOException {
