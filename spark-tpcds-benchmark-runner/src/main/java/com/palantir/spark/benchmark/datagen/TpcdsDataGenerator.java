@@ -208,18 +208,18 @@ public final class TpcdsDataGenerator {
                 .forEach(MoreFutures::join);
     }
 
-    private boolean shouldGenerateData(int scale, org.apache.hadoop.fs.Path tableParquetLocationPath) {
+    private boolean shouldGenerateData(int scale, org.apache.hadoop.fs.Path destinationPath) {
         try {
-            if (!destinationFileSystem.exists(tableParquetLocationPath) || shouldOverwriteData) {
-                if (destinationFileSystem.isDirectory(tableParquetLocationPath)
-                        && !destinationFileSystem.delete(tableParquetLocationPath, true)) {
+            if (!destinationFileSystem.exists(destinationPath) || shouldOverwriteData) {
+                if (destinationFileSystem.isDirectory(destinationPath)
+                        && !destinationFileSystem.delete(destinationPath, true)) {
                     throw new IllegalStateException(
-                            String.format("Failed to clear data file directory at %s.", tableParquetLocationPath));
+                            String.format("Failed to clear data file directory at %s.", destinationPath));
                 }
             } else {
                 log.info(
                         "Not overwriting data at path {} for the given scale of {}.",
-                        SafeArg.of("dataPath", tableParquetLocationPath),
+                        SafeArg.of("dataPath", destinationPath),
                         SafeArg.of("dataScale", scale));
                 return false;
             }
