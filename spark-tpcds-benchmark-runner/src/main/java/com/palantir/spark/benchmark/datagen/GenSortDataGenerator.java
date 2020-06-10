@@ -70,6 +70,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     private final TableRegistration registration;
     private final Path tempWorkingDir;
     private final List<ScaleAndRecords> scalesAndRecords;
+    private final boolean shouldOverwriteData;
     private final ListeningExecutorService dataGeneratorThreadPool;
 
     public GenSortDataGenerator(
@@ -80,6 +81,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             TableRegistration registration,
             Path tempWorkingDir,
             List<Integer> scales,
+            boolean shouldOverwriteData,
             ExecutorService dataGeneratorThreadPool) {
         this.spark = spark;
         this.destinationFileSystem = destinationFileSystem;
@@ -93,6 +95,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                         .numRecords(estimateNumRecords(scale))
                         .build())
                 .collect(Collectors.toList());
+        this.shouldOverwriteData = shouldOverwriteData;
         this.dataGeneratorThreadPool = MoreExecutors.listeningDecorator(dataGeneratorThreadPool);
     }
 
@@ -106,6 +109,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             BenchmarkPaths paths,
             TableRegistration registration,
             Path tempWorkingDir,
+            boolean shouldOverwriteData,
             ExecutorService dataGeneratorThreadPool) {
         this.spark = spark;
         this.destinationFileSystem = destinationFileSystem;
@@ -114,6 +118,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
         this.registration = registration;
         this.tempWorkingDir = tempWorkingDir;
         this.scalesAndRecords = scalesAndRecords;
+        this.shouldOverwriteData = shouldOverwriteData;
         this.dataGeneratorThreadPool = MoreExecutors.listeningDecorator(dataGeneratorThreadPool);
     }
 
@@ -136,21 +141,10 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             scalesAndRecords.forEach(scaleAndRecords -> {
                 int scale = scaleAndRecords.scale();
                 long totalNumRecords = scaleAndRecords.numRecords();
-
                 // We are estimating the number of records anyway, so it's fine if we generate an extra partition
                 // in some cases.
                 long numberOfPartitions = (totalNumRecords / RECORDS_PER_PARTITION) + 1;
-                LongStream.range(0, numberOfPartitions)
-                        .mapToObj(partitionIndex ->
-                                generateData(dataDir, scaleAndRecords, partitionIndex, genSortBinaryPath))
-                        .collect(Collectors.toList()) // Always collect to force kick off all tasks
-                        .forEach(MoreFutures::join);
-
-                DataGenUtils.uploadFiles(
-                        destinationFileSystem,
-                        paths.csvDir(scale),
-                        dataDir.toFile(),
-                        MoreExecutors.newDirectExecutorService());
+                generateAndUploadCsv(genSortBinaryPath, dataDir, scaleAndRecords, scale, numberOfPartitions);
 
                 StructType schema = DataTypes.createStructType(
                         ImmutableList.of(DataTypes.createStructField("record", DataTypes.StringType, false)));
@@ -160,7 +154,13 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                 Set<String> generatedCsvPaths = LongStream.range(0, numberOfPartitions)
                         .mapToObj(partitionIndex -> paths.tableCsvFile(scale, GENERATED_DATA_FILE_NAME, partitionIndex))
                         .collect(Collectors.toSet());
-                parquetTransformer.transform(spark, schema, generatedCsvPaths, destinationPath, "\n");
+                if (DataGenUtils.shouldWriteData(
+                        destinationFileSystem,
+                        scale,
+                        new org.apache.hadoop.fs.Path(destinationPath),
+                        shouldOverwriteData)) {
+                    parquetTransformer.transform(spark, schema, generatedCsvPaths, destinationPath, "\n");
+                }
                 registration.registerTable("gensort_data", schema, scale);
             });
         } catch (IOException e) {
@@ -175,6 +175,23 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                         e);
             }
         }
+    }
+
+    private void generateAndUploadCsv(
+            Path genSortBinaryPath, Path dataDir, ScaleAndRecords scaleAndRecords, int scale, long numberOfPartitions) {
+        org.apache.hadoop.fs.Path firstPartitionPath = new org.apache.hadoop.fs.Path(
+                dataDir.resolve(GENERATED_DATA_FILE_NAME + "_0" + ".csv").toString());
+
+        // Even if just the first partition exists, do not overwrite it.
+        if (!DataGenUtils.shouldWriteData(destinationFileSystem, scale, firstPartitionPath, shouldOverwriteData)) {
+            return;
+        }
+        LongStream.range(0, numberOfPartitions)
+                .mapToObj(partitionIndex -> generateData(dataDir, scaleAndRecords, partitionIndex, genSortBinaryPath))
+                .collect(Collectors.toList()) // Always collect to force kick off all tasks
+                .forEach(MoreFutures::join);
+        DataGenUtils.uploadFiles(
+                destinationFileSystem, paths.csvDir(scale), dataDir.toFile(), MoreExecutors.newDirectExecutorService());
     }
 
     private ListenableFuture<?> generateData(

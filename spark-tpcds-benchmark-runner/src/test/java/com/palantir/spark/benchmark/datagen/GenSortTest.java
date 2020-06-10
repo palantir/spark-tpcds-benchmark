@@ -60,6 +60,7 @@ public final class GenSortTest extends AbstractLocalSparkTest {
                 paths,
                 new TableRegistration(paths, dataFileSystem, sparkSession, new Schemas()),
                 workingDir,
+                true,
                 MoreExecutors.newDirectExecutorService());
         genSortDataGenerator.generate();
 

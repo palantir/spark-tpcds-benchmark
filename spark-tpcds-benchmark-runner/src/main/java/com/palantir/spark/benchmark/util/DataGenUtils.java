@@ -19,6 +19,7 @@ package com.palantir.spark.benchmark.util;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.palantir.logsafe.SafeArg;
+import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -87,6 +88,36 @@ public final class DataGenUtils {
                     "Dsdgen binary was not found in the tarball; was this benchmark runner packaged correctly?");
         }
         return dsdgenFile;
+    }
+
+    public static boolean shouldWriteData(
+            FileSystem destinationFileSystem,
+            int scale,
+            org.apache.hadoop.fs.Path destinationPath,
+            boolean shouldOverwriteData) {
+        try {
+            if (!destinationFileSystem.exists(destinationPath) || shouldOverwriteData) {
+                deleteDestinationPathIfNecessary(destinationFileSystem, destinationPath);
+                return true;
+            } else {
+                log.info(
+                        "Not overwriting data at path {} for the given scale of {}.",
+                        SafeArg.of("dataPath", destinationPath),
+                        SafeArg.of("dataScale", scale));
+                return false;
+            }
+        } catch (IOException e) {
+            throw new SafeRuntimeException(e);
+        }
+    }
+
+    private static void deleteDestinationPathIfNecessary(
+            FileSystem destinationFileSystem, org.apache.hadoop.fs.Path destinationPath) throws IOException {
+        if (destinationFileSystem.isDirectory(destinationPath)
+                && !destinationFileSystem.delete(destinationPath, true)) {
+            throw new IllegalStateException(
+                    String.format("Failed to clear data file directory at %s.", destinationPath));
+        }
     }
 
     public static void uploadFiles(
