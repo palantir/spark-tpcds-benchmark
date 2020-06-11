@@ -16,24 +16,13 @@
 
 package com.palantir.spark.benchmark.config;
 
-import static com.palantir.logsafe.Preconditions.checkArgument;
-
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.palantir.spark.benchmark.immutables.ImmutablesConfigStyle;
 import org.immutables.value.Value;
 
 @Value.Immutable
 @ImmutablesConfigStyle
-@JsonDeserialize(as = ImmutableBenchmarksConfiguration.class)
-public interface BenchmarksConfiguration {
-    int iterations();
-
-    SourceBenchmarksConfiguration tpcds();
-
-    SourceBenchmarksConfiguration gensort();
-
-    @Value.Check
-    default void check() {
-        checkArgument(iterations() >= 0, "Iterations must be non-negative.");
-    }
+@JsonDeserialize(as = ImmutableSourceBenchmarksConfiguration.class)
+public interface SourceBenchmarksConfiguration {
+    boolean enabled();
 }

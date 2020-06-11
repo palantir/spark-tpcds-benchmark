@@ -176,8 +176,12 @@ public final class Benchmark {
 
     private List<Query> getQueries() {
         ImmutableList.Builder<Query> queries = ImmutableList.builder();
-        queries.add(new SortBenchmarkQuery(spark));
-        queries.addAll(sqlQuerySupplier.get());
+        if (config.benchmarks().tpcds().enabled()) {
+            queries.addAll(sqlQuerySupplier.get());
+        }
+        if (config.benchmarks().gensort().enabled()) {
+            queries.add(new SortBenchmarkQuery(spark));
+        }
         return queries.build();
     }
 

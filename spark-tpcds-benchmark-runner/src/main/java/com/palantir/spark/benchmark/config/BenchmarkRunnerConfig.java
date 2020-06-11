@@ -33,8 +33,6 @@ import org.immutables.value.Value;
 @ImmutablesConfigStyle
 @JsonDeserialize(as = ImmutableBenchmarkRunnerConfig.class)
 public interface BenchmarkRunnerConfig {
-    ObjectMapper MAPPER = new ObjectMapper(new YAMLFactory()).registerModules(new Jdk8Module(), new GuavaModule());
-
     HadoopConfiguration hadoop();
 
     SparkConfiguration spark();
@@ -52,7 +50,9 @@ public interface BenchmarkRunnerConfig {
     }
 
     static BenchmarkRunnerConfig parse(Path configFile) throws IOException {
-        return MAPPER.readValue(configFile.toFile(), BenchmarkRunnerConfig.class);
+        ObjectMapper objectMapper =
+                new ObjectMapper(new YAMLFactory()).registerModules(new Jdk8Module(), new GuavaModule());
+        return objectMapper.readValue(configFile.toFile(), BenchmarkRunnerConfig.class);
     }
 
     class Builder extends ImmutableBenchmarkRunnerConfig.Builder {}
