@@ -22,14 +22,8 @@ import org.apache.commons.lang3.StringUtils;
 
 public final class BenchmarkPaths {
 
-    private final String testDataDir;
-
-    public BenchmarkPaths(String testDataDir) {
-        this.testDataDir = testDataDir;
-    }
-
     public String rootDataDir(int scale) {
-        return String.join(File.separator, testDataDir, "benchmark_data", String.format("scale=%d", scale));
+        return String.join(File.separator, "benchmark_data", String.format("scale=%d", scale));
     }
 
     public String tableCsvFile(int scale, TpcdsTable table) {
@@ -74,6 +68,6 @@ public final class BenchmarkPaths {
     }
 
     public String metricsDir() {
-        return String.join(File.separator, testDataDir, "tpcds_benchmark_results");
+        return String.join(File.separator, "benchmark_results");
     }
 }

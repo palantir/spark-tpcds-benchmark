@@ -18,7 +18,7 @@ package com.palantir.spark.benchmark.metrics;
 
 import com.google.common.base.Stopwatch;
 import com.palantir.logsafe.Preconditions;
-import com.palantir.spark.benchmark.config.BenchmarkConfig;
+import com.palantir.spark.benchmark.config.BenchmarkRunnerConfig;
 import com.palantir.spark.benchmark.immutables.ImmutablesStyle;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import java.util.ArrayList;
@@ -33,13 +33,13 @@ import scala.collection.JavaConverters;
 
 public final class BenchmarkMetrics {
 
-    private final BenchmarkConfig config;
+    private final BenchmarkRunnerConfig config;
     private final List<Row> metrics = new ArrayList<>();
     private final BenchmarkPaths paths;
     private final SparkSession spark;
     private RunningQuery currentRunningQuery;
 
-    public BenchmarkMetrics(BenchmarkConfig config, BenchmarkPaths paths, SparkSession spark) {
+    public BenchmarkMetrics(BenchmarkRunnerConfig config, BenchmarkPaths paths, SparkSession spark) {
         this.config = config;
         this.paths = paths;
         this.spark = spark;

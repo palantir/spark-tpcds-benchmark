@@ -17,7 +17,7 @@
 package com.palantir.spark.benchmark;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.palantir.spark.benchmark.config.BenchmarkConfig;
+import com.palantir.spark.benchmark.config.BenchmarkRunnerConfig;
 import com.palantir.spark.benchmark.correctness.TpcdsQueryCorrectnessChecks;
 import com.palantir.spark.benchmark.datagen.DefaultParquetTransformer;
 import com.palantir.spark.benchmark.datagen.GenSortDataGenerator;
@@ -27,6 +27,7 @@ import com.palantir.spark.benchmark.metrics.BenchmarkMetrics;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.registration.TableRegistration;
 import com.palantir.spark.benchmark.schemas.Schemas;
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
@@ -50,14 +51,14 @@ public final class BenchmarkRunner {
         } else {
             configFile = Paths.get(args[0]);
         }
-        BenchmarkConfig config = BenchmarkConfig.parse(configFile);
+        BenchmarkRunnerConfig config = BenchmarkRunnerConfig.parse(configFile);
         Configuration hadoopConf = config.hadoop().toHadoopConf();
-        try (FileSystem dataFileSystem =
-                FileSystem.get(config.testDataDirectory().toUri(), hadoopConf)) {
+        try (FileSystem dataFileSystem = FileSystem.get(URI.create("/"), hadoopConf)) {
             SparkConf sparkConf = new SparkConf().setMaster(config.spark().master());
             config.spark().sparkConf().forEach(sparkConf::set);
             hadoopConf.forEach(confEntry ->
                     sparkConf.set(String.format("spark.hadoop.%s", confEntry.getKey()), confEntry.getValue()));
+
             // Force turn off dynamic allocation for consistent results
             if (!config.spark().master().startsWith("local")) {
                 sparkConf.set("spark.dynamicAllocation.enabled", "false");
@@ -70,20 +71,20 @@ public final class BenchmarkRunner {
             }
 
             SparkSession spark = SparkSession.builder().config(sparkConf).getOrCreate();
-            BenchmarkPaths paths = new BenchmarkPaths(config.testDataDirectory().toString());
+            BenchmarkPaths paths = new BenchmarkPaths();
             Schemas schemas = new Schemas();
             TableRegistration registration = new TableRegistration(paths, dataFileSystem, spark, schemas);
             ExecutorService dataGeneratorThreadPool = Executors.newFixedThreadPool(
-                    config.dataGenerationParallelism(),
+                    config.dataGeneration().parallelism(),
                     new ThreadFactoryBuilder()
                             .setDaemon(true)
                             .setNameFormat("data-generator-%d")
                             .build());
             DefaultParquetTransformer parquetTransformer = new DefaultParquetTransformer();
             TpcdsDataGenerator dataGenerator = new TpcdsDataGenerator(
-                    config.dsdgenWorkLocalDir(),
+                    Paths.get(config.dataGeneration().tempWorkingDir()),
                     config.dataScalesGb(),
-                    config.overwriteData(),
+                    config.dataGeneration().overwriteData(),
                     dataFileSystem,
                     parquetTransformer,
                     spark,
@@ -96,9 +97,9 @@ public final class BenchmarkRunner {
                     parquetTransformer,
                     paths,
                     registration,
-                    config.dsdgenWorkLocalDir(),
+                    Paths.get(config.dataGeneration().tempWorkingDir()),
                     config.dataScalesGb(),
-                    config.overwriteData(),
+                    config.dataGeneration().overwriteData(),
                     dataGeneratorThreadPool);
             TpcdsQueryCorrectnessChecks correctness = new TpcdsQueryCorrectnessChecks(paths, dataFileSystem, spark);
             BenchmarkMetrics metrics = new BenchmarkMetrics(config, paths, spark);

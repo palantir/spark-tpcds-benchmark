@@ -1,8 +1,3 @@
-dataGenerationParallelism: 5
-dataScalesGb:
-- 1
-dsdgenWorkLocalDir: /tmp/tpcds_work_dir
-generateData: true
 hadoop:
   hadoopConfDirs: []
   hadoopConf: {}
@@ -23,7 +18,6 @@ hadoop:
       type: azure
       accountName: MY_ACCOUNT_NAME
       accessKey: MY_ACCESS_KEY
-overwriteData: false
 spark:
   #executorCores: 1
   #executorInstances: 8
@@ -33,5 +27,16 @@ spark:
   sparkConf:
     spark.yarn.jars: service/lib/*
     spark.sql.adaptive.enabled: true
-testDataDir: test_data
-iterations: 1
+
+dataScalesGb:
+  - 1
+dataGeneration:
+  parallelism: 5
+  tempWorkingDir: /tmp/spark-benchmark-datagen-working-dir
+  tpcds:
+    enabled: true
+  gensort:
+    enabled: true
+  overwriteData: false
+benchmarks:
+  iterations: 1

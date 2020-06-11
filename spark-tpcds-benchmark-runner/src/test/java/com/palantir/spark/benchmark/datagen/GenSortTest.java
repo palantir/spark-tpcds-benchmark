@@ -47,8 +47,7 @@ public final class GenSortTest extends AbstractLocalSparkTest {
         FileSystem dataFileSystem =
                 FileSystem.get(URI.create(fullyQualifiedDestinationDir), TEST_HADOOP_CONFIGURATION.toHadoopConf());
 
-        BenchmarkPaths paths =
-                new BenchmarkPaths(destinationDataDirectory.toFile().getAbsolutePath());
+        BenchmarkPaths paths = new BenchmarkPaths();
         GenSortDataGenerator genSortDataGenerator = new GenSortDataGenerator(
                 ImmutableList.of(ScaleAndRecords.builder()
                         .scale(scale)

@@ -43,8 +43,7 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
                 FileSystem.get(URI.create(fullyQualifiedDestinationDir), TEST_HADOOP_CONFIGURATION.toHadoopConf());
         int scale = 1;
 
-        BenchmarkPaths paths =
-                new BenchmarkPaths(destinationDataDirectory.toFile().getAbsolutePath());
+        BenchmarkPaths paths = new BenchmarkPaths();
         TpcdsDataGenerator generator = new TpcdsDataGenerator(
                 workingDir,
                 ImmutableList.of(scale),
