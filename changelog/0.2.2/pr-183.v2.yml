@@ -1,0 +1,5 @@
+type: feature
+feature:
+  description: upload and transform gensort data to parquet
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/183

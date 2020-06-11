@@ -5,7 +5,7 @@
 version: 2.1
 jobs:
   compile:
-    docker: [{ image: 'circleci/openjdk:8u222-stretch-node' }]
+    docker: [{ image: 'circleci/openjdk:11-node' }]
     resource_class: large
     environment:
       CIRCLE_TEST_REPORTS: /home/circleci/junit
@@ -54,7 +54,7 @@ jobs:
           paths: [ project, .gradle/init.gradle ]
 
   check:
-    docker: [{ image: 'circleci/openjdk:8u222-stretch-node' }]
+    docker: [{ image: 'circleci/openjdk:11-node' }]
     environment:
       CIRCLE_TEST_REPORTS: /home/circleci/junit
       CIRCLE_ARTIFACTS: /home/circleci/artifacts
@@ -75,7 +75,7 @@ jobs:
       - store_artifacts: { path: ~/artifacts }
 
   unit-test:
-    docker: [{ image: 'circleci/openjdk:8u222-stretch-node' }]
+    docker: [{ image: 'circleci/openjdk:11-node' }]
     resource_class: large
     environment:
       CIRCLE_TEST_REPORTS: /home/circleci/junit
@@ -96,28 +96,6 @@ jobs:
       - store_test_results: { path: ~/junit }
       - store_artifacts: { path: ~/artifacts }
 
-  unit-test-11:
-    docker: [{ image: 'circleci/openjdk:11-node' }]
-    resource_class: large
-    environment:
-      CIRCLE_TEST_REPORTS: /home/circleci/junit
-      CIRCLE_ARTIFACTS: /home/circleci/artifacts
-      GRADLE_OPTS: -Dorg.gradle.jvmargs='-XX:MaxMetaspaceSize=256m' -Dorg.gradle.workers.max=4
-      _JAVA_OPTIONS: -XX:ActiveProcessorCount=4 -Xmx1177m -XX:MaxMetaspaceSize=512m  -XX:ErrorFile=/home/circleci/artifacts/hs_err_pid%p.log -XX:HeapDumpPath=/home/circleci/artifacts
-    steps:
-      - checkout
-      - restore_cache: { key: 'gradle-wrapper-v2-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}' }
-      - restore_cache: { key: 'unit-test-11-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}' }
-      - run: ./gradlew --parallel --stacktrace --continue test -Pcom.palantir.baseline-error-prone.disable
-      - save_cache:
-          key: 'unit-test-11-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}'
-          paths: [ ~/.gradle/caches ]
-      - run:
-          command: mkdir -p ~/junit && find . -type f -regex ".*/build/.*TEST.*xml" -exec cp --parents {} ~/junit/ \;
-          when: always
-      - store_test_results: { path: ~/junit }
-      - store_artifacts: { path: ~/artifacts }
-
 
   build:
     machine: { docker_layer_caching: true }
@@ -125,10 +103,17 @@ jobs:
       CIRCLE_TEST_REPORTS: /home/circleci/junit
       CIRCLE_ARTIFACTS: /home/circleci/artifacts
       _JAVA_OPTIONS: -Dorg.gradle.internal.launcher.welcomeMessageEnabled=false -Xmx8192m
+      JAVA_HOME: /opt/java11
     steps:
       - attach_workspace: { at: /home/circleci }
       - restore_cache: { key: 'gradle-wrapper-v2-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}' }
       - restore_cache: { key: 'build-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}' }
+      - run:
+          name: Install Java
+          command: |
+            sudo mkdir -p /opt/java && cd /opt/java && sudo chown -R circleci:circleci .
+            curl https://cdn.azul.com/zulu/bin/zulu11.39.15-ca-jdk11.0.7-linux_x64.tar.gz | tar -xzf - -C /opt/java
+            sudo ln -s /opt/java/zulu*/ /opt/java11
       - run: ./gradlew --parallel --stacktrace build -x test -x check
       - save_cache:
           key: 'build-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}'
@@ -139,33 +124,8 @@ jobs:
       - store_test_results: { path: ~/junit }
       - store_artifacts: { path: ~/artifacts }
 
-  build-11:
-    machine: { docker_layer_caching: true }
-    environment:
-      CIRCLE_TEST_REPORTS: /home/circleci/junit
-      CIRCLE_ARTIFACTS: /home/circleci/artifacts
-      JAVA_HOME: /opt/java11
-      _JAVA_OPTIONS: -Dorg.gradle.internal.launcher.welcomeMessageEnabled=false -Xmx8192m
-    steps:
-      - attach_workspace: { at: /home/circleci }
-      - restore_cache: { key: 'gradle-wrapper-v2-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}' }
-      - restore_cache: { key: 'build-11-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}' }
-      - run: |
-          sudo mkdir -p /opt/java && cd /opt/java && sudo chown -R circleci:circleci .
-          curl https://cdn.azul.com/zulu/bin/zulu11.39.15-ca-jdk11.0.7-linux_x64.tar.gz | tar -xzf - -C /opt/java
-          sudo ln -s /opt/java/zulu*/ /opt/java11
-      - run: ./gradlew --parallel --stacktrace build -x test -x check -Pcom.palantir.baseline-error-prone.disable
-      - save_cache:
-          key: 'build-11-gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}'
-          paths: [ ~/.gradle/caches ]
-      - run:
-          command: mkdir -p ~/junit && find . -type f -regex ".*/build/.*TEST.*xml" -exec cp --parents {} ~/junit/ \; || true
-          when: always
-      - store_test_results: { path: ~/junit }
-      - store_artifacts: { path: ~/artifacts }
-
   trial-publish:
-    docker: [{ image: 'circleci/openjdk:8u222-stretch-node' }]
+    docker: [{ image: 'circleci/openjdk:11-node' }]
     environment:
       CIRCLE_TEST_REPORTS: /home/circleci/junit
       CIRCLE_ARTIFACTS: /home/circleci/artifacts
@@ -183,7 +143,7 @@ jobs:
       - store_artifacts: { path: ~/artifacts }
 
   publish:
-    docker: [{ image: 'circleci/openjdk:8u222-stretch-node' }]
+    docker: [{ image: 'circleci/openjdk:11-node' }]
     environment:
       CIRCLE_TEST_REPORTS: /home/circleci/junit
       CIRCLE_ARTIFACTS: /home/circleci/artifacts
@@ -219,18 +179,11 @@ workflows:
           requires: [ compile ]
           filters: { tags: { only: /.*/ } }
 
-      - unit-test-11:
-          filters: { tags: { only: /.*/ } }
-
       - check:
           requires: [ compile ]
           filters: { tags: { only: /.*/ } }
 
       - build:
-          requires: [ compile ]
-          filters: { tags: { only: /.*/ } }
-
-      - build-11:
           requires: [ compile ]
           filters: { tags: { only: /.*/ } }
 
@@ -242,5 +195,5 @@ workflows:
           filters: { branches: { ignore: develop } }
 
       - publish:
-          requires: [ unit-test, unit-test-11, check, build, build-11, trial-publish ]
+          requires: [ unit-test, check, build, trial-publish ]
           filters: { tags: { only: /.*/ }, branches: { only: develop } }

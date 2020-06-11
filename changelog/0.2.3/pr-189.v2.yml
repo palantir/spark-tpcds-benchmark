@@ -1,0 +1,6 @@
+type: improvement
+improvement:
+  description: Adds support for Azure & AWS's respective blob stores. Relatedly, upgrade
+    to Java 11 to avoid the many non-performant ciphers on Java 8.
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/189

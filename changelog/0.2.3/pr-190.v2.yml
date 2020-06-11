@@ -1,0 +1,5 @@
+type: feature
+feature:
+  description: Generate gensort data in 1GB partitions
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/190

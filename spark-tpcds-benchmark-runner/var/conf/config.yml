@@ -6,6 +6,23 @@ generateData: true
 hadoop:
   hadoopConfDirs: []
   hadoopConf: {}
+  defaultFilesystem: local
+  filesystems:
+    local:
+      type: simple
+      baseUri: file:///tmp/spark-benchmark
+    hdfs:
+      type: simple
+      baseUri: hdfs://spark-benchmark
+    s3a:
+      type: s3a
+      baseUri: s3a://MY_S3_BUCKET/spark-benchmark
+      accessKey: MY_ACCESS_KEY
+      secretKey: MY_SECRET_KEY
+    azure:
+      type: azure
+      accountName: MY_ACCOUNT_NAME
+      accessKey: MY_ACCESS_KEY
 overwriteData: false
 spark:
   #executorCores: 1
@@ -15,10 +32,6 @@ spark:
   master: local[4]
   sparkConf:
     spark.yarn.jars: service/lib/*
-#testDataDir: hdfs://localhost:8020/data/tpcds/test_data
-testDataDir: file:///tmp/hdfs/data/tpcds/test_data
+    spark.sql.adaptive.enabled: true
+testDataDir: test_data
 iterations: 1
-sort:
-  enabled: true
-  numRecords: 100000
-#excludeSqlQueries: false

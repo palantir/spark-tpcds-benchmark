@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: Use gensort data to perform sort benchmark
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/185
