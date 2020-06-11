@@ -21,7 +21,6 @@ import java.io.File;
 import org.apache.commons.lang3.StringUtils;
 
 public final class BenchmarkPaths {
-
     public String rootDataDir(int scale) {
         return String.join(File.separator, "benchmark_data", String.format("scale=%d", scale));
     }
@@ -68,6 +67,6 @@ public final class BenchmarkPaths {
     }
 
     public String metricsDir() {
-        return String.join(File.separator, "benchmark_results");
+        return String.join(File.separator, "tpcds_benchmark_results");
     }
 }

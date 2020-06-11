@@ -20,12 +20,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.palantir.spark.benchmark.config.HadoopConfiguration;
+import com.palantir.spark.benchmark.config.SimpleFilesystemConfiguration;
 import com.palantir.spark.benchmark.datagen.GenSortDataGenerator.ScaleAndRecords;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.queries.SortBenchmarkQuery;
 import com.palantir.spark.benchmark.registration.TableRegistration;
 import com.palantir.spark.benchmark.schemas.Schemas;
-import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -44,8 +45,12 @@ public final class GenSortTest extends AbstractLocalSparkTest {
 
         String fullyQualifiedDestinationDir =
                 "file://" + destinationDataDirectory.toFile().getAbsolutePath();
+        HadoopConfiguration hadoopConfiguration = HadoopConfiguration.builder()
+                .defaultFilesystem("local")
+                .putFilesystems("local", SimpleFilesystemConfiguration.of(fullyQualifiedDestinationDir))
+                .build();
         FileSystem dataFileSystem =
-                FileSystem.get(URI.create(fullyQualifiedDestinationDir), TEST_HADOOP_CONFIGURATION.toHadoopConf());
+                FileSystem.get(hadoopConfiguration.defaultFsBaseUri(), hadoopConfiguration.toHadoopConf());
 
         BenchmarkPaths paths = new BenchmarkPaths();
         GenSortDataGenerator genSortDataGenerator = new GenSortDataGenerator(

@@ -16,8 +16,6 @@
 
 package com.palantir.spark.benchmark.datagen;
 
-import com.palantir.spark.benchmark.config.HadoopConfiguration;
-import com.palantir.spark.benchmark.config.SimpleFilesystemConfiguration;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,11 +25,6 @@ import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 
 public abstract class AbstractLocalSparkTest {
-    static final HadoopConfiguration TEST_HADOOP_CONFIGURATION = HadoopConfiguration.builder()
-            .defaultFilesystem("local")
-            .putFilesystems("local", SimpleFilesystemConfiguration.of("file:///tmp/spark-benchmark"))
-            .build();
-
     SparkSession sparkSession;
 
     @BeforeEach

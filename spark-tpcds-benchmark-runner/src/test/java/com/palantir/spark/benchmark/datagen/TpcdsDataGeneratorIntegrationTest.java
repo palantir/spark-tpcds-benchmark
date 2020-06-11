@@ -21,9 +21,10 @@ import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.palantir.spark.benchmark.config.HadoopConfiguration;
+import com.palantir.spark.benchmark.config.SimpleFilesystemConfiguration;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.schemas.Schemas;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -39,8 +40,12 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
 
         String fullyQualifiedDestinationDir =
                 "file://" + destinationDataDirectory.toFile().getAbsolutePath();
+        HadoopConfiguration hadoopConfiguration = HadoopConfiguration.builder()
+                .defaultFilesystem("local")
+                .putFilesystems("local", SimpleFilesystemConfiguration.of(fullyQualifiedDestinationDir))
+                .build();
         FileSystem dataFileSystem =
-                FileSystem.get(URI.create(fullyQualifiedDestinationDir), TEST_HADOOP_CONFIGURATION.toHadoopConf());
+                FileSystem.get(hadoopConfiguration.defaultFsBaseUri(), hadoopConfiguration.toHadoopConf());
         int scale = 1;
 
         BenchmarkPaths paths = new BenchmarkPaths();

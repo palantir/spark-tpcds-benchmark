@@ -24,6 +24,7 @@ import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.spark.benchmark.immutables.ImmutablesConfigStyle;
 import java.io.File;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -45,12 +46,17 @@ public interface HadoopConfiguration {
     Map<String, FilesystemConfiguration> filesystems();
 
     @Value.Derived
-    default String defaultFsUri() {
+    default String defaultFsBaseUriString() {
         return Optional.ofNullable(filesystems().get(defaultFilesystem()))
                 .orElseThrow(() -> new SafeIllegalArgumentException(
                         "Specified defaultFilesystem is not configured",
                         SafeArg.of("defaultFilesystem", defaultFilesystem())))
                 .baseUri();
+    }
+
+    @Value.Derived
+    default URI defaultFsBaseUri() {
+        return new org.apache.hadoop.fs.Path(defaultFsBaseUriString()).toUri();
     }
 
     @Value.Derived
@@ -74,7 +80,7 @@ public interface HadoopConfiguration {
                         filesystems().values().stream().flatMap(fsConf -> fsConf.toHadoopConf().entrySet().stream()))
                 .collectToMap()
                 .forEach(hadoopConf::set);
-        hadoopConf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, defaultFsUri());
+        hadoopConf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, defaultFsBaseUriString());
         return hadoopConf;
     }
 

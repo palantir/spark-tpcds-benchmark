@@ -40,3 +40,7 @@ dataGeneration:
   overwriteData: false
 benchmarks:
   iterations: 1
+  tpcds:
+    enabled: true
+  gensort:
+    enabled: true

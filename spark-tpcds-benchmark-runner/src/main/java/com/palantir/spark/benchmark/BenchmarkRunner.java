@@ -27,7 +27,6 @@ import com.palantir.spark.benchmark.metrics.BenchmarkMetrics;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.registration.TableRegistration;
 import com.palantir.spark.benchmark.schemas.Schemas;
-import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
@@ -53,7 +52,7 @@ public final class BenchmarkRunner {
         }
         BenchmarkRunnerConfig config = BenchmarkRunnerConfig.parse(configFile);
         Configuration hadoopConf = config.hadoop().toHadoopConf();
-        try (FileSystem dataFileSystem = FileSystem.get(URI.create("/"), hadoopConf)) {
+        try (FileSystem dataFileSystem = FileSystem.get(config.hadoop().defaultFsBaseUri(), hadoopConf)) {
             SparkConf sparkConf = new SparkConf().setMaster(config.spark().master());
             config.spark().sparkConf().forEach(sparkConf::set);
             hadoopConf.forEach(confEntry ->
