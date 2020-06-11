@@ -67,6 +67,6 @@ public final class BenchmarkPaths {
     }
 
     public String metricsDir() {
-        return String.join(File.separator, "tpcds_benchmark_results");
+        return String.join(File.separator, "benchmark_results");
     }
 }
