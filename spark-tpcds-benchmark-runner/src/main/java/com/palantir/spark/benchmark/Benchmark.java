@@ -21,7 +21,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.CharStreams;
 import com.palantir.logsafe.SafeArg;
-import com.palantir.spark.benchmark.config.BenchmarkConfig;
+import com.palantir.spark.benchmark.config.BenchmarkRunnerConfig;
 import com.palantir.spark.benchmark.correctness.TpcdsQueryCorrectnessChecks;
 import com.palantir.spark.benchmark.datagen.SortDataGenerator;
 import com.palantir.spark.benchmark.datagen.TpcdsDataGenerator;
@@ -54,7 +54,7 @@ public final class Benchmark {
     private static final ImmutableSet<String> BLACKLISTED_QUERIES =
             ImmutableSet.of("q23b.sql", "q39a.sql", "q39b.sql", "q14b.sql", "q49.sql", "q64.sql", "q77.sql");
 
-    private final BenchmarkConfig config;
+    private final BenchmarkRunnerConfig config;
     private final TpcdsDataGenerator dataGenerator;
     private final SortDataGenerator sortDataGenerator;
     private final TableRegistration registration;
@@ -66,7 +66,7 @@ public final class Benchmark {
     private final Supplier<ImmutableList<Query>> sqlQuerySupplier;
 
     public Benchmark(
-            BenchmarkConfig config,
+            BenchmarkRunnerConfig config,
             TpcdsDataGenerator dataGenerator,
             SortDataGenerator sortDataGenerator,
             TableRegistration registration,
@@ -88,15 +88,17 @@ public final class Benchmark {
     }
 
     public void run() throws IOException {
-        if (config.generateData()) {
+        if (config.dataGeneration().tpcds().enabled()) {
             dataGenerator.generateData();
+        }
+        if (config.dataGeneration().gensort().enabled()) {
             sortDataGenerator.generate();
         }
-        for (int iteration = 0; iteration < config.iterations(); iteration++) {
+        for (int iteration = 0; iteration < config.benchmarks().iterations(); iteration++) {
             log.info(
                     "Beginning benchmark iteration {} of {}.",
                     SafeArg.of("currentIteration", iteration),
-                    SafeArg.of("totalNumIterations", config.iterations()));
+                    SafeArg.of("totalNumIterations", config.benchmarks().iterations()));
             config.dataScalesGb().forEach(scale -> {
                 log.info("Beginning benchmarks at a new data scale of {}.", SafeArg.of("dataScale", scale));
                 registration.registerTables(scale);
@@ -174,9 +176,11 @@ public final class Benchmark {
 
     private List<Query> getQueries() {
         ImmutableList.Builder<Query> queries = ImmutableList.builder();
-        queries.add(new SortBenchmarkQuery(spark));
-        if (!config.excludeSqlQueries()) {
+        if (config.benchmarks().tpcds().enabled()) {
             queries.addAll(sqlQuerySupplier.get());
+        }
+        if (config.benchmarks().gensort().enabled()) {
+            queries.add(new SortBenchmarkQuery(spark));
         }
         return queries.build();
     }

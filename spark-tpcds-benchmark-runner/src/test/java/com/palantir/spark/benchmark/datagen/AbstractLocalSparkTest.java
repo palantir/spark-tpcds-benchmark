@@ -27,11 +27,6 @@ import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 
 public abstract class AbstractLocalSparkTest {
-    static final HadoopConfiguration TEST_HADOOP_CONFIGURATION = HadoopConfiguration.builder()
-            .defaultFilesystem("local")
-            .putFilesystems("local", SimpleFilesystemConfiguration.of("file:///tmp/spark-benchmark"))
-            .build();
-
     SparkSession sparkSession;
 
     @BeforeEach
@@ -45,6 +40,17 @@ public abstract class AbstractLocalSparkTest {
     }
 
     final Path createTemporaryWorkingDir(String prefix) throws IOException {
-        return Files.createDirectory(Paths.get("/tmp", prefix + "_" + UUID.randomUUID()));
+        Path directory = Files.createDirectory(Paths.get("/tmp", prefix + "_" + UUID.randomUUID()));
+        directory.toFile().deleteOnExit();
+        return directory;
+    }
+
+    final HadoopConfiguration getHadoopConfiguration(Path destinationDataDirectory) {
+        String fullyQualifiedDestinationDir =
+                "file://" + destinationDataDirectory.toFile().getAbsolutePath();
+        return HadoopConfiguration.builder()
+                .defaultFilesystem("local")
+                .putFilesystems("local", SimpleFilesystemConfiguration.of(fullyQualifiedDestinationDir))
+                .build();
     }
 }

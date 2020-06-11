@@ -20,17 +20,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.palantir.spark.benchmark.config.HadoopConfiguration;
 import com.palantir.spark.benchmark.datagen.GenSortDataGenerator.ScaleAndRecords;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.queries.SortBenchmarkQuery;
 import com.palantir.spark.benchmark.registration.TableRegistration;
 import com.palantir.spark.benchmark.schemas.Schemas;
-import java.net.URI;
+import com.palantir.spark.benchmark.util.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.jupiter.api.Test;
 
@@ -39,16 +39,13 @@ public final class GenSortTest extends AbstractLocalSparkTest {
     public void testGeneratesData() throws Exception {
         Path workingDir = createTemporaryWorkingDir("working_dir");
         Path destinationDataDirectory = createTemporaryWorkingDir("data");
+        HadoopConfiguration hadoopConfiguration = getHadoopConfiguration(destinationDataDirectory);
+        FileSystem dataFileSystem = FileSystems.createFileSystem(
+                hadoopConfiguration.defaultFsBaseUri(), hadoopConfiguration.toHadoopConf());
+
+        BenchmarkPaths paths = new BenchmarkPaths();
         int scale = 1;
         int numRecords = 100;
-
-        String fullyQualifiedDestinationDir =
-                "file://" + destinationDataDirectory.toFile().getAbsolutePath();
-        FileSystem dataFileSystem =
-                FileSystem.get(URI.create(fullyQualifiedDestinationDir), TEST_HADOOP_CONFIGURATION.toHadoopConf());
-
-        BenchmarkPaths paths =
-                new BenchmarkPaths(destinationDataDirectory.toFile().getAbsolutePath());
         GenSortDataGenerator genSortDataGenerator = new GenSortDataGenerator(
                 ImmutableList.of(ScaleAndRecords.builder()
                         .scale(scale)
@@ -64,18 +61,22 @@ public final class GenSortTest extends AbstractLocalSparkTest {
                 MoreExecutors.newDirectExecutorService());
         genSortDataGenerator.generate();
 
-        List<String> generatedLines = read(Paths.get(paths.tableCsvFile(scale, "gensort_data", 0)), "csv");
+        List<String> generatedLines = read(
+                Paths.get(
+                        hadoopConfiguration.defaultFsBaseUri().getPath(), paths.tableCsvFile(scale, "gensort_data", 0)),
+                "csv");
         assertThat(generatedLines).hasSize(numRecords);
 
-        List<String> copiedParquet = read(Paths.get(paths.tableParquetLocation(scale, "gensort_data")), "parquet");
+        List<String> copiedParquet = read(
+                Paths.get(
+                        hadoopConfiguration.defaultFsBaseUri().getPath(),
+                        paths.tableParquetLocation(scale, "gensort_data")),
+                "parquet");
         assertThat(copiedParquet).hasSameElementsAs(generatedLines);
 
         SortBenchmarkQuery query = new SortBenchmarkQuery(sparkSession);
         // Should not throw. We can't assert sortedness since the data could be saved in multiple partitions.
         query.save(paths.experimentResultLocation(scale, "gensort"));
-
-        // Clean up
-        FileUtils.deleteDirectory(destinationDataDirectory.toFile());
     }
 
     private List<String> read(Path path, String format) {

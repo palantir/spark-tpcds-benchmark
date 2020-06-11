@@ -1,0 +1,6 @@
+type: improvement
+improvement:
+  description: |-
+    Refactor config structure to support selective data generation, as well as general consolidation
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/198

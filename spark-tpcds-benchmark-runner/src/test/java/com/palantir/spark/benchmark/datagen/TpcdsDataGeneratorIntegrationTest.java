@@ -21,9 +21,10 @@ import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.palantir.spark.benchmark.config.HadoopConfiguration;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.schemas.Schemas;
-import java.net.URI;
+import com.palantir.spark.benchmark.util.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -36,15 +37,12 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
     public void testGeneratesAndUploadsData() throws Exception {
         Path workingDir = createTemporaryWorkingDir("working_dir");
         Path destinationDataDirectory = createTemporaryWorkingDir("data");
+        HadoopConfiguration hadoopConfiguration = getHadoopConfiguration(destinationDataDirectory);
+        FileSystem dataFileSystem = FileSystems.createFileSystem(
+                hadoopConfiguration.defaultFsBaseUri(), hadoopConfiguration.toHadoopConf());
 
-        String fullyQualifiedDestinationDir =
-                "file://" + destinationDataDirectory.toFile().getAbsolutePath();
-        FileSystem dataFileSystem =
-                FileSystem.get(URI.create(fullyQualifiedDestinationDir), TEST_HADOOP_CONFIGURATION.toHadoopConf());
+        BenchmarkPaths paths = new BenchmarkPaths();
         int scale = 1;
-
-        BenchmarkPaths paths =
-                new BenchmarkPaths(destinationDataDirectory.toFile().getAbsolutePath());
         TpcdsDataGenerator generator = new TpcdsDataGenerator(
                 workingDir,
                 ImmutableList.of(scale),
@@ -56,7 +54,8 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
                 new Schemas(),
                 MoreExecutors.newDirectExecutorService());
         generator.generateData();
-        try (Stream<Path> generatedCsvFiles = Files.list(Paths.get(paths.csvDir(scale)))
+        try (Stream<Path> generatedCsvFiles = Files.list(
+                        Paths.get(hadoopConfiguration.defaultFsBaseUri().getPath(), paths.csvDir(scale)))
                 .filter(path -> path.toString().endsWith(".csv"))) {
             assertThat(generatedCsvFiles.count()).isEqualTo(25);
         }
