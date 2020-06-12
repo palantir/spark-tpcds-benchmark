@@ -179,8 +179,9 @@ public final class GenSortDataGenerator implements SortDataGenerator {
 
     private void generateAndUploadCsv(
             Path genSortBinaryPath, Path dataDir, ScaleAndRecords scaleAndRecords, int scale, long numberOfPartitions) {
-        org.apache.hadoop.fs.Path firstPartitionPath = new org.apache.hadoop.fs.Path(
-                dataDir.resolve(GENERATED_DATA_FILE_NAME + "_0" + ".csv").toString());
+        org.apache.hadoop.fs.Path firstPartitionPath = new org.apache.hadoop.fs.Path(Paths.get(paths.csvDir(scale))
+                .resolve(GENERATED_DATA_FILE_NAME + "_0" + ".csv")
+                .toString());
 
         // Even if just the first partition exists, do not overwrite it.
         if (!DataGenUtils.shouldWriteData(destinationFileSystem, scale, firstPartitionPath, shouldOverwriteData)) {
