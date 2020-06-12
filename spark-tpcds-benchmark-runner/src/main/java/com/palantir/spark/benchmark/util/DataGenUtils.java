@@ -98,6 +98,10 @@ public final class DataGenUtils {
         try {
             if (!destinationFileSystem.exists(destinationPath) || shouldOverwriteData) {
                 deleteDestinationPathIfNecessary(destinationFileSystem, destinationPath);
+                log.info(
+                        "Writing data at path {} for the given scale of {}.",
+                        SafeArg.of("dataPath", destinationPath),
+                        SafeArg.of("dataScale", scale));
                 return true;
             } else {
                 log.info(
