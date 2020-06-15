@@ -37,10 +37,12 @@ public abstract class AzureBlobStoreConfiguration extends FilesystemConfiguratio
 
     public abstract String accessKey();
 
+    public abstract String containerName();
+
     public abstract Optional<String> workingDirectory();
 
     private String realWorkingDirectory() {
-        return StringUtils.strip(workingDirectory().orElse("spark-benchmark"), "/");
+        return StringUtils.strip(workingDirectory().orElse("/"), "/");
     }
 
     public final String accessKeyPropertyName() {
@@ -49,7 +51,8 @@ public abstract class AzureBlobStoreConfiguration extends FilesystemConfiguratio
 
     @Override
     public final String baseUri() {
-        return "wasbs://data@" + accountName() + ".blob.core.windows.net/" + realWorkingDirectory();
+        return String.format(
+                "wasbs://%s@%s.blob.core.windows.net/%s", containerName(), accountName(), realWorkingDirectory());
     }
 
     @Override

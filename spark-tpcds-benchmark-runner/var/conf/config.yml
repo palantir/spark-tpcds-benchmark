@@ -18,6 +18,7 @@ hadoop:
       type: azure
       accountName: MY_ACCOUNT_NAME
       accessKey: MY_ACCESS_KEY
+      containerName: spark-benchmark
 spark:
   #executorCores: 1
   #executorInstances: 8
@@ -29,7 +30,7 @@ spark:
     spark.sql.adaptive.enabled: true
 
 dataScalesGb:
-  - 1
+  - 10
 dataGeneration:
   parallelism: 5
   tempWorkingDir: /tmp/spark-benchmark/datagen-working-dir

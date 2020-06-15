@@ -94,7 +94,7 @@ public final class Benchmark {
         if (config.dataGeneration().gensort().enabled()) {
             sortDataGenerator.generate();
         }
-        for (int iteration = 0; iteration < config.benchmarks().iterations(); iteration++) {
+        for (int iteration = 1; iteration <= config.benchmarks().iterations(); iteration++) {
             log.info(
                     "Beginning benchmark iteration {} of {}.",
                     SafeArg.of("currentIteration", iteration),
