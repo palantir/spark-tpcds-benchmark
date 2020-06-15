@@ -18,6 +18,7 @@ hadoop:
       type: azure
       accountName: MY_ACCOUNT_NAME
       accessKey: MY_ACCESS_KEY
+      containerName: spark-benchmark
 spark:
   #executorCores: 1
   #executorInstances: 8
