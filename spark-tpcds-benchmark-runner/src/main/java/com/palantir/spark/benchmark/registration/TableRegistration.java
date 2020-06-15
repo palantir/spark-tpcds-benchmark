@@ -40,7 +40,7 @@ public final class TableRegistration {
         this.schemas = schemas;
     }
 
-    public void registerTables(int scale) {
+    public void registerTpcdsTables(int scale) {
         Stream.of(TpcdsTable.values()).forEach(table -> {
             registerTable(table.tableName(), schemas.getSchema(table), scale);
         });

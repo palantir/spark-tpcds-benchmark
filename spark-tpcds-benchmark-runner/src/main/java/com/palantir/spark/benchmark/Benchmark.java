@@ -101,7 +101,7 @@ public final class Benchmark {
                     SafeArg.of("totalNumIterations", config.benchmarks().iterations()));
             config.dataScalesGb().forEach(scale -> {
                 log.info("Beginning benchmarks at a new data scale of {}.", SafeArg.of("dataScale", scale));
-                registration.registerTables(scale);
+                registration.registerTpcdsTables(scale);
                 registration.registerGensortTable(scale);
                 getQueries().forEach(query -> {
                     log.info(
