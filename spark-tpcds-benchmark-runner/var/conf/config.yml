@@ -30,7 +30,7 @@ spark:
     spark.sql.adaptive.enabled: true
 
 dataScalesGb:
-  - 10
+  - 1
 dataGeneration:
   parallelism: 5
   tempWorkingDir: /tmp/spark-benchmark/datagen-working-dir
