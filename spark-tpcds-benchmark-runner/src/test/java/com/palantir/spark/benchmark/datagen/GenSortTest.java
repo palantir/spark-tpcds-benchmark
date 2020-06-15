@@ -46,6 +46,9 @@ public final class GenSortTest extends AbstractLocalSparkTest {
         BenchmarkPaths paths = new BenchmarkPaths();
         int scale = 1;
         int numRecords = 100;
+        Schemas schemas = new Schemas();
+        TableRegistration tableRegistration = new TableRegistration(paths, dataFileSystem, sparkSession, schemas);
+
         GenSortDataGenerator genSortDataGenerator = new GenSortDataGenerator(
                 ImmutableList.of(ScaleAndRecords.builder()
                         .scale(scale)
@@ -55,11 +58,12 @@ public final class GenSortTest extends AbstractLocalSparkTest {
                 dataFileSystem,
                 new DefaultParquetTransformer(), // test that our schema works by copying for real.
                 paths,
-                new TableRegistration(paths, dataFileSystem, sparkSession, new Schemas()),
+                schemas,
                 workingDir,
                 true,
                 MoreExecutors.newDirectExecutorService());
         genSortDataGenerator.generate();
+        tableRegistration.registerGensortTable(scale);
 
         List<String> generatedLines = read(
                 Paths.get(

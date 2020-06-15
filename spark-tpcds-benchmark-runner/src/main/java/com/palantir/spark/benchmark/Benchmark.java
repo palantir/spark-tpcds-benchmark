@@ -102,6 +102,7 @@ public final class Benchmark {
             config.dataScalesGb().forEach(scale -> {
                 log.info("Beginning benchmarks at a new data scale of {}.", SafeArg.of("dataScale", scale));
                 registration.registerTables(scale);
+                registration.registerGensortTable(scale);
                 getQueries().forEach(query -> {
                     log.info(
                             "Running query {}: {}",
