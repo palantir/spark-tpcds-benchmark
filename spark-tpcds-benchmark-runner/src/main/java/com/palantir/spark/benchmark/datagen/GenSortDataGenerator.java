@@ -17,14 +17,13 @@
 package com.palantir.spark.benchmark.datagen;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.palantir.logsafe.SafeArg;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
-import com.palantir.spark.benchmark.registration.TableRegistration;
+import com.palantir.spark.benchmark.schemas.Schemas;
 import com.palantir.spark.benchmark.util.DataGenUtils;
 import com.palantir.spark.benchmark.util.MoreFutures;
 import java.io.IOException;
@@ -40,7 +39,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.immutables.value.Value;
 import org.slf4j.Logger;
@@ -67,7 +65,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
     private final FileSystem destinationFileSystem;
     private final ParquetTransformer parquetTransformer;
     private final BenchmarkPaths paths;
-    private final TableRegistration registration;
+    private final Schemas schemas;
     private final Path tempWorkingDir;
     private final List<ScaleAndRecords> scalesAndRecords;
     private final boolean shouldOverwriteData;
@@ -78,7 +76,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             FileSystem destinationFileSystem,
             ParquetTransformer parquetTransformer,
             BenchmarkPaths paths,
-            TableRegistration registration,
+            Schemas schemas,
             Path tempWorkingDir,
             List<Integer> scales,
             boolean shouldOverwriteData,
@@ -87,7 +85,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
         this.destinationFileSystem = destinationFileSystem;
         this.parquetTransformer = parquetTransformer;
         this.paths = paths;
-        this.registration = registration;
+        this.schemas = schemas;
         this.tempWorkingDir = tempWorkingDir;
         this.scalesAndRecords = scales.stream()
                 .map(scale -> ScaleAndRecords.builder()
@@ -107,7 +105,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
             FileSystem destinationFileSystem,
             ParquetTransformer parquetTransformer,
             BenchmarkPaths paths,
-            TableRegistration registration,
+            Schemas schemas,
             Path tempWorkingDir,
             boolean shouldOverwriteData,
             ExecutorService dataGeneratorThreadPool) {
@@ -115,7 +113,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
         this.destinationFileSystem = destinationFileSystem;
         this.parquetTransformer = parquetTransformer;
         this.paths = paths;
-        this.registration = registration;
+        this.schemas = schemas;
         this.tempWorkingDir = tempWorkingDir;
         this.scalesAndRecords = scalesAndRecords;
         this.shouldOverwriteData = shouldOverwriteData;
@@ -146,8 +144,7 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                 long numberOfPartitions = (totalNumRecords / RECORDS_PER_PARTITION) + 1;
                 generateAndUploadCsv(genSortBinaryPath, dataDir, scaleAndRecords, scale, numberOfPartitions);
 
-                StructType schema = DataTypes.createStructType(
-                        ImmutableList.of(DataTypes.createStructField("record", DataTypes.StringType, false)));
+                StructType schema = schemas.getGensortSchema();
                 String destinationPath = Paths.get(paths.parquetDir(scale), GENERATED_DATA_FILE_NAME)
                         .toString();
 
@@ -161,7 +158,6 @@ public final class GenSortDataGenerator implements SortDataGenerator {
                         shouldOverwriteData)) {
                     parquetTransformer.transform(spark, schema, generatedCsvPaths, destinationPath, "\n");
                 }
-                registration.registerTable("gensort_data", schema, scale);
             });
         } catch (IOException e) {
             throw new SafeRuntimeException("IOException while setting up gensort binary", e);

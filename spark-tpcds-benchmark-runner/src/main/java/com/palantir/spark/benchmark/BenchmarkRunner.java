@@ -97,7 +97,7 @@ public final class BenchmarkRunner {
                     dataFileSystem,
                     parquetTransformer,
                     paths,
-                    registration,
+                    schemas,
                     Paths.get(config.dataGeneration().tempWorkingDir()),
                     config.dataScalesGb(),
                     config.dataGeneration().overwriteData(),

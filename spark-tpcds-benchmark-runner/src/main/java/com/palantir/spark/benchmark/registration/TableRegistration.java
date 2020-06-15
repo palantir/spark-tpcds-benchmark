@@ -18,6 +18,7 @@ package com.palantir.spark.benchmark.registration;
 
 import com.palantir.spark.benchmark.constants.TpcdsTable;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
+import com.palantir.spark.benchmark.queries.SortBenchmarkQuery;
 import com.palantir.spark.benchmark.schemas.Schemas;
 import java.io.IOException;
 import java.util.stream.Stream;
@@ -27,7 +28,6 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 
 public final class TableRegistration {
-
     private final BenchmarkPaths paths;
     private final FileSystem dataFileSystem;
     private final SparkSession spark;
@@ -40,13 +40,17 @@ public final class TableRegistration {
         this.schemas = schemas;
     }
 
-    public void registerTables(int scale) {
+    public void registerTpcdsTables(int scale) {
         Stream.of(TpcdsTable.values()).forEach(table -> {
             registerTable(table.tableName(), schemas.getSchema(table), scale);
         });
     }
 
-    public void registerTable(String tableName, StructType schema, int scale) {
+    public void registerGensortTable(int scale) {
+        registerTable(SortBenchmarkQuery.TABLE_NAME, schemas.getGensortSchema(), scale);
+    }
+
+    private void registerTable(String tableName, StructType schema, int scale) {
         String tableLocation = paths.tableParquetLocation(scale, tableName);
         Path tablePath = new Path(tableLocation);
         try {

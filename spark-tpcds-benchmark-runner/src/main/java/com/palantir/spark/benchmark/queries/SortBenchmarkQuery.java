@@ -24,6 +24,8 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 
 public final class SortBenchmarkQuery implements Query {
+    public static final String TABLE_NAME = "gensort_data";
+
     private final SparkSession spark;
     private final Supplier<Dataset<Row>> datasetSupplier;
 
@@ -53,6 +55,6 @@ public final class SortBenchmarkQuery implements Query {
     }
 
     private Dataset<Row> buildDataset() {
-        return spark.table("gensort_data").sort("record");
+        return spark.table(TABLE_NAME).sort("record");
     }
 }

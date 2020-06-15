@@ -19,6 +19,7 @@ package com.palantir.spark.benchmark.schemas;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharStreams;
 import com.palantir.logsafe.Preconditions;
 import com.palantir.spark.benchmark.constants.TpcdsTable;
@@ -47,6 +48,11 @@ public final class Schemas {
 
     public StructType getSchema(TpcdsTable table) {
         return schemas.computeIfAbsent(table, this::doGetSchema);
+    }
+
+    public StructType getGensortSchema() {
+        return DataTypes.createStructType(
+                ImmutableList.of(DataTypes.createStructField("record", DataTypes.StringType, false)));
     }
 
     private StructType doGetSchema(TpcdsTable table) {
