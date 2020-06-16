@@ -112,7 +112,7 @@ public final class Benchmark {
                             SafeArg.of("queryName", query.getName()),
                             SafeArg.of("queryStatement", query.getSqlStatement().orElse("N/A")));
                     try {
-                        String resultLocation = paths.experimentResultLocation(scale, query.getName());
+                        String resultLocation = paths.experimentResultLocation(experimentName, scale, query.getName());
                         Path resultPath = new Path(resultLocation);
                         if (dataFileSystem.exists(resultPath) && !dataFileSystem.delete(resultPath, true)) {
                             throw new IllegalStateException(String.format(

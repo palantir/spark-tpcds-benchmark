@@ -53,17 +53,25 @@ public final class BenchmarkPaths {
         return String.join(File.separator, rootDataDir(scale), "raw_parquet");
     }
 
-    public String experimentResultLocation(int scale, String queryName) {
-        return String.join(File.separator, rootDataDir(scale), "experiments", StringUtils.removeEnd(queryName, ".sql"));
-    }
-
-    public String experimentCorrectnessHashesRoot(int scale) {
-        return String.join(File.separator, rootDataDir(scale), "experiments_correctness_hashes");
-    }
-
-    public String experimentCorrectnessHashesLocation(int scale, String queryName) {
+    public String experimentResultLocation(String experimentName, int scale, String queryName) {
         return String.join(
-                File.separator, experimentCorrectnessHashesRoot(scale), StringUtils.removeEnd(queryName, ".sql"));
+                File.separator,
+                "experiments",
+                experimentName,
+                String.format("scale=%d", scale),
+                StringUtils.removeEnd(queryName, ".sql"));
+    }
+
+    public String experimentCorrectnessHashesRoot(String experimentName, int scale) {
+        return String.join(
+                File.separator, "experiments_correctness_hashes", experimentName, String.format("scale=%d", scale));
+    }
+
+    public String experimentCorrectnessHashesLocation(String experimentName, int scale, String queryName) {
+        return String.join(
+                File.separator,
+                experimentCorrectnessHashesRoot(experimentName, scale),
+                StringUtils.removeEnd(queryName, ".sql"));
     }
 
     public String metricsDir(String experimentName) {
