@@ -117,7 +117,6 @@ public final class TpcdsDataGenerator {
     private ListenableFuture<?> generateAndUploadDataForScale(int scale, Path tempDir, Path resolvedDsdgenFile) {
         ListenableFuture<?> uploadDataForScaleTask = dataGeneratorThreadPool.submit(() -> {
             try {
-                invalidateHashesIfNecessary(scale);
                 generateAndUploadCsv(scale, tempDir, resolvedDsdgenFile);
                 saveTablesAsParquet(scale);
             } catch (InterruptedException | IOException e) {
@@ -164,18 +163,6 @@ public final class TpcdsDataGenerator {
         log.info("Finished running dsdgen for data scale {}.", SafeArg.of("scale", scale));
         log.info("Uploading tpcds data from location {}.", SafeArg.of("localLocation", tpcdsTempDir.getAbsolutePath()));
         DataGenUtils.uploadFiles(destinationFileSystem, rootDataPath.toString(), tpcdsTempDir, dataGeneratorThreadPool);
-    }
-
-    private void invalidateHashesIfNecessary(int scale) throws IOException {
-        // If overwriting, invalidate the previous correctness results.
-        org.apache.hadoop.fs.Path correctnessHashesRoot =
-                new org.apache.hadoop.fs.Path(paths.experimentCorrectnessHashesRoot(scale));
-        if (destinationFileSystem.exists(correctnessHashesRoot)
-                && shouldOverwriteData
-                && !destinationFileSystem.delete(correctnessHashesRoot, true)) {
-            throw new IllegalStateException(String.format(
-                    "Failed to clear the correctness hashes result directory at %s.", correctnessHashesRoot));
-        }
     }
 
     private void saveTablesAsParquet(int scale) {
