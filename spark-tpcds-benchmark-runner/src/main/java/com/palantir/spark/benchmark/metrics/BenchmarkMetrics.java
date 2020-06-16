@@ -91,7 +91,7 @@ public final class BenchmarkMetrics {
                 .write()
                 .mode(SaveMode.Append)
                 .format("json")
-                .save(paths.metricsDir());
+                .save(paths.metricsDir(config.benchmarks().experimentName()));
         metrics.clear();
     }
 

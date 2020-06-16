@@ -26,6 +26,8 @@ import org.immutables.value.Value;
 @ImmutablesConfigStyle
 @JsonDeserialize(as = ImmutableBenchmarksConfiguration.class)
 public interface BenchmarksConfiguration {
+    String experimentName();
+
     int iterations();
 
     SourceBenchmarksConfiguration tpcds();

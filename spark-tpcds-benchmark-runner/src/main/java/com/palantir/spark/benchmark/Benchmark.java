@@ -163,7 +163,9 @@ public final class Benchmark {
         }
         log.info("Successfully ran all benchmarks for the requested number of iterations");
 
-        Dataset<Row> resultMetrics = spark.read().json(paths.metricsDir()).drop("sparkConf");
+        Dataset<Row> resultMetrics = spark.read()
+                .json(paths.metricsDir(config.benchmarks().experimentName()))
+                .drop("sparkConf");
         log.info(
                 "Printing summary metrics (limit 1000):\n{}",
                 SafeArg.of(

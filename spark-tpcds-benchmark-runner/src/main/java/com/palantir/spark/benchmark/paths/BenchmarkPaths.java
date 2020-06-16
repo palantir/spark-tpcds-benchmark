@@ -66,7 +66,7 @@ public final class BenchmarkPaths {
                 File.separator, experimentCorrectnessHashesRoot(scale), StringUtils.removeEnd(queryName, ".sql"));
     }
 
-    public String metricsDir() {
-        return String.join(File.separator, "benchmark_results");
+    public String metricsDir(String experimentName) {
+        return String.join(File.separator, experimentName, "benchmark_results");
     }
 }
