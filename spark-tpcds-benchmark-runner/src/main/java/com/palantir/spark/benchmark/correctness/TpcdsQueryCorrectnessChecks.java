@@ -44,14 +44,11 @@ public final class TpcdsQueryCorrectnessChecks {
 
     private static final Logger log = LoggerFactory.getLogger(TpcdsQueryCorrectnessChecks.class);
 
-    private final String experimentName;
     private final BenchmarkPaths paths;
     private final FileSystem dataFileSystem;
     private final SparkSession spark;
 
-    public TpcdsQueryCorrectnessChecks(
-            String experimentName, BenchmarkPaths paths, FileSystem dataFileSystem, SparkSession spark) {
-        this.experimentName = experimentName;
+    public TpcdsQueryCorrectnessChecks(BenchmarkPaths paths, FileSystem dataFileSystem, SparkSession spark) {
         this.paths = paths;
         this.dataFileSystem = dataFileSystem;
         this.spark = spark;
@@ -71,7 +68,7 @@ public final class TpcdsQueryCorrectnessChecks {
                 .optional
                 .map(HashCode::asBytes)
                 .orElse(new byte[] {});
-        Path hashCodePath = new Path(paths.experimentCorrectnessHashesLocation(experimentName, scale, queryName));
+        Path hashCodePath = new Path(paths.experimentCorrectnessHashesLocation(scale, queryName));
         if (dataFileSystem.isFile(hashCodePath)) {
             try (InputStream previousHashCodeInput = dataFileSystem.open(hashCodePath)) {
                 byte[] previousHashCodeBytes = ByteStreams.toByteArray(previousHashCodeInput);

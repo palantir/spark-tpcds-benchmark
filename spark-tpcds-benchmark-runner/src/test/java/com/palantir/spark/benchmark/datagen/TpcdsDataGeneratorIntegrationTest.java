@@ -41,7 +41,7 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
         FileSystem dataFileSystem = FileSystems.createFileSystem(
                 hadoopConfiguration.defaultFsBaseUri(), hadoopConfiguration.toHadoopConf());
 
-        BenchmarkPaths paths = new BenchmarkPaths();
+        BenchmarkPaths paths = new BenchmarkPaths(experimentName);
         int scale = 1;
         TpcdsDataGenerator generator = new TpcdsDataGenerator(
                 workingDir,

@@ -55,7 +55,6 @@ public final class Benchmark {
             ImmutableSet.of("q23b.sql", "q39a.sql", "q39b.sql", "q14b.sql", "q49.sql", "q64.sql", "q77.sql");
 
     private final BenchmarkRunnerConfig config;
-    private final String experimentName;
     private final TpcdsDataGenerator dataGenerator;
     private final SortDataGenerator sortDataGenerator;
     private final TableRegistration registration;
@@ -68,7 +67,6 @@ public final class Benchmark {
 
     public Benchmark(
             BenchmarkRunnerConfig config,
-            String experimentName,
             TpcdsDataGenerator dataGenerator,
             SortDataGenerator sortDataGenerator,
             TableRegistration registration,
@@ -78,7 +76,6 @@ public final class Benchmark {
             SparkSession spark,
             FileSystem dataFileSystem) {
         this.config = config;
-        this.experimentName = experimentName;
         this.dataGenerator = dataGenerator;
         this.sortDataGenerator = sortDataGenerator;
         this.registration = registration;
@@ -159,15 +156,14 @@ public final class Benchmark {
                 });
                 log.info("Successfully ran benchmarks at scale of {} GB.", SafeArg.of("scale", scale));
             });
-            metrics.flushMetrics(experimentName);
+            metrics.flushMetrics();
             log.info(
                     "Successfully finished an iteration of benchmarks at all scales. Completed {} iterations in total.",
                     SafeArg.of("completedIterations", iteration));
         }
         log.info("Successfully ran all benchmarks for the requested number of iterations");
 
-        Dataset<Row> resultMetrics =
-                spark.read().json(paths.metricsDir(experimentName)).drop("sparkConf");
+        Dataset<Row> resultMetrics = spark.read().json(paths.metricsDir()).drop("sparkConf");
         log.info(
                 "Printing summary metrics (limit 1000):\n{}",
                 SafeArg.of(

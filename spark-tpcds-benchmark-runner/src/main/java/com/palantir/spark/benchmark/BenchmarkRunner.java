@@ -73,7 +73,7 @@ public final class BenchmarkRunner {
             }
 
             SparkSession spark = SparkSession.builder().config(sparkConf).getOrCreate();
-            BenchmarkPaths paths = new BenchmarkPaths();
+            BenchmarkPaths paths = new BenchmarkPaths(experimentName);
             Schemas schemas = new Schemas();
             TableRegistration registration = new TableRegistration(paths, dataFileSystem, spark, schemas);
             ExecutorService dataGeneratorThreadPool = Executors.newFixedThreadPool(
@@ -105,12 +105,10 @@ public final class BenchmarkRunner {
                     dataGeneratorThreadPool);
             String experimentName = config.benchmarks().experimentName().orElseGet(() -> Instant.now()
                     .toString());
-            TpcdsQueryCorrectnessChecks correctness =
-                    new TpcdsQueryCorrectnessChecks(experimentName, paths, dataFileSystem, spark);
+            TpcdsQueryCorrectnessChecks correctness = new TpcdsQueryCorrectnessChecks(paths, dataFileSystem, spark);
             BenchmarkMetrics metrics = new BenchmarkMetrics(config, paths, spark);
             new Benchmark(
                             config,
-                            experimentName,
                             dataGenerator,
                             sortDataGenerator,
                             registration,
