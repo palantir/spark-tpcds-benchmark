@@ -30,6 +30,7 @@ import com.palantir.spark.benchmark.schemas.Schemas;
 import com.palantir.spark.benchmark.util.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.hadoop.conf.Configuration;
@@ -72,7 +73,9 @@ public final class BenchmarkRunner {
             }
 
             SparkSession spark = SparkSession.builder().config(sparkConf).getOrCreate();
-            BenchmarkPaths paths = new BenchmarkPaths();
+            String experimentName = config.benchmarks().experimentName().orElseGet(() -> Instant.now()
+                    .toString());
+            BenchmarkPaths paths = new BenchmarkPaths(experimentName);
             Schemas schemas = new Schemas();
             TableRegistration registration = new TableRegistration(paths, dataFileSystem, spark, schemas);
             ExecutorService dataGeneratorThreadPool = Executors.newFixedThreadPool(

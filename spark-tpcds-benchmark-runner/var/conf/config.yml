@@ -40,6 +40,8 @@ dataGeneration:
     enabled: true
   overwriteData: false
 benchmarks:
+  # Optional: Defaults to current timestamp.
+  # experimentName: <change me>
   iterations: 1
   tpcds:
     enabled: true
