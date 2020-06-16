@@ -86,12 +86,12 @@ public final class BenchmarkMetrics {
         currentRunningQuery = null;
     }
 
-    public void flushMetrics() {
+    public void flushMetrics(String experimentName) {
         spark.createDataFrame(metrics, BenchmarkMetric.SPARK_SCHEMA)
                 .write()
                 .mode(SaveMode.Append)
                 .format("json")
-                .save(paths.metricsDir(config.benchmarks().experimentName()));
+                .save(paths.metricsDir(experimentName));
         metrics.clear();
     }
 

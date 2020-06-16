@@ -20,13 +20,14 @@ import static com.palantir.logsafe.Preconditions.checkArgument;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.palantir.spark.benchmark.immutables.ImmutablesConfigStyle;
+import java.util.Optional;
 import org.immutables.value.Value;
 
 @Value.Immutable
 @ImmutablesConfigStyle
 @JsonDeserialize(as = ImmutableBenchmarksConfiguration.class)
 public interface BenchmarksConfiguration {
-    String experimentName();
+    Optional<String> experimentName();
 
     int iterations();
 

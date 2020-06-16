@@ -30,6 +30,7 @@ import com.palantir.spark.benchmark.schemas.Schemas;
 import com.palantir.spark.benchmark.util.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.hadoop.conf.Configuration;
@@ -104,8 +105,11 @@ public final class BenchmarkRunner {
                     dataGeneratorThreadPool);
             TpcdsQueryCorrectnessChecks correctness = new TpcdsQueryCorrectnessChecks(paths, dataFileSystem, spark);
             BenchmarkMetrics metrics = new BenchmarkMetrics(config, paths, spark);
+            String experimentName = config.benchmarks().experimentName().orElseGet(() -> Instant.now()
+                    .toString());
             new Benchmark(
                             config,
+                            experimentName,
                             dataGenerator,
                             sortDataGenerator,
                             registration,
