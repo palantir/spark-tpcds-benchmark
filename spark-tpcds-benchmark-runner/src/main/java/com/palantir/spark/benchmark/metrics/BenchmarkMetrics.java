@@ -34,13 +34,16 @@ import scala.collection.JavaConverters;
 public final class BenchmarkMetrics {
 
     private final BenchmarkRunnerConfig config;
+    private final String resolvedExperimentName;
     private final List<Row> metrics = new ArrayList<>();
     private final BenchmarkPaths paths;
     private final SparkSession spark;
     private RunningQuery currentRunningQuery;
 
-    public BenchmarkMetrics(BenchmarkRunnerConfig config, BenchmarkPaths paths, SparkSession spark) {
+    public BenchmarkMetrics(
+            BenchmarkRunnerConfig config, String resolvedExperimentName, BenchmarkPaths paths, SparkSession spark) {
         this.config = config;
+        this.resolvedExperimentName = resolvedExperimentName;
         this.paths = paths;
         this.spark = spark;
         this.currentRunningQuery = null;
@@ -62,6 +65,7 @@ public final class BenchmarkMetrics {
         long elapsed = stopped.elapsed(TimeUnit.MILLISECONDS);
         long startTime = endTime - elapsed;
         metrics.add(BenchmarkMetric.builder()
+                .experimentName(resolvedExperimentName)
                 .queryName(currentRunningQuery.queryName())
                 .scale(currentRunningQuery.scale())
                 .sparkVersion(spark.version())

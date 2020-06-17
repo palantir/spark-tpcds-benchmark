@@ -106,7 +106,7 @@ public final class BenchmarkRunner {
                     config.dataGeneration().overwriteData(),
                     dataGeneratorThreadPool);
             TpcdsQueryCorrectnessChecks correctness = new TpcdsQueryCorrectnessChecks(paths, dataFileSystem, spark);
-            BenchmarkMetrics metrics = new BenchmarkMetrics(config, paths, spark);
+            BenchmarkMetrics metrics = new BenchmarkMetrics(config, experimentName, paths, spark);
             new Benchmark(
                             config,
                             dataGenerator,
