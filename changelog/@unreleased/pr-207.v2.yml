@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: Write experiment name to metrics file
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/207
