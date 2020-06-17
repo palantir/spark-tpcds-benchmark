@@ -36,6 +36,8 @@ public abstract class BenchmarkMetric implements Serializable {
 
     public static final StructType SPARK_SCHEMA = schema();
 
+    public abstract String experimentName();
+
     public abstract String queryName();
 
     public abstract int scale();
@@ -60,6 +62,7 @@ public abstract class BenchmarkMetric implements Serializable {
 
     public static StructType schema() {
         return new StructType(Stream.of(
+                        new StructField("experimentName", DataTypes.StringType, false, Metadata.empty()),
                         new StructField("queryName", DataTypes.StringType, false, Metadata.empty()),
                         new StructField("scale", DataTypes.IntegerType, false, Metadata.empty()),
                         new StructField("sparkVersion", DataTypes.StringType, false, Metadata.empty()),
