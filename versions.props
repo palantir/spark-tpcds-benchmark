@@ -1,5 +1,6 @@
 com.amazonaws:aws-java-sdk-* = 1.11.805
 com.microsoft.azure:azure-storage = 8.4.0
+com.fasterxml.jackson.*:* = 2.11.0
 com.google.guava:guava = 27.0.1-jre
 com.palantir.common:streams = 1.9.1
 com.palantir.conjure.java.runtime:* = 6.1.0
@@ -10,6 +11,7 @@ javax.servlet.jsp:jsp-api = 2.2
 org.assertj:* = 3.16.1
 org.immutables:* = 2.8.8
 org.apache.parquet:* = 1.12.0-palantir.7
-org.apache.spark:spark-dist_2.11-hadoop-palantir-bom = 3.0.0-palantir.73
+org.apache.hadoop:* = 2.7.4
+org.apache.spark:* = 3.0.0
 org.junit.jupiter:* = 5.6.2
 org.mockito:* = 3.3.3

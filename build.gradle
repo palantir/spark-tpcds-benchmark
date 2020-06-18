@@ -59,10 +59,6 @@ allprojects {
             url 'https://palantir.bintray.com/releases'
         }
     }
-    // Configure BOMs as rootConfiguration dependencies
-    dependencies {
-        rootConfiguration platform("org.apache.spark:spark-dist_2.11-hadoop-palantir-bom")
-    }
 }
 
 configure(subprojects) {

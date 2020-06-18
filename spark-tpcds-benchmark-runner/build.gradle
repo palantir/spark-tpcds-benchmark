@@ -27,11 +27,11 @@ dependencies {
     implementation 'com.palantir.common:streams'
     implementation 'com.palantir.safe-logging:preconditions'
     implementation 'com.palantir.conjure.java.runtime:client-config'
-    implementation 'org.apache.spark:spark-sql_2.11'
+    implementation 'org.apache.spark:spark-sql_2.12'
 
     implementation "org.apache.hadoop:hadoop-aws"
     implementation "org.apache.hadoop:hadoop-azure"
-    runtimeOnly 'org.apache.spark:spark-yarn_2.11'
+    runtimeOnly 'org.apache.spark:spark-yarn_2.12'
 
     testImplementation 'org.assertj:assertj-core'
     testImplementation 'org.junit.jupiter:junit-jupiter'
