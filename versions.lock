@@ -1,6 +1,6 @@
 # Run ./gradlew --write-locks to regenerate this file
 aopalliance:aopalliance:1.0 (1 constraints: 170a83ac)
-com.amazonaws:aws-java-sdk-bundle:1.11.803 (1 constraints: dc0c9f27)
+com.amazonaws:aws-java-sdk-bundle:1.11.805 (1 constraints: dc0c9f27)
 com.carrotsearch:hppc:0.7.2 (1 constraints: f70cda14)
 com.clearspring.analytics:stream:2.9.6 (2 constraints: e9215f08)
 com.esotericsoftware:kryo-shaded:4.0.2 (2 constraints: b71345a6)

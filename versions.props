@@ -1,4 +1,4 @@
-com.amazonaws:aws-java-sdk-* = 1.11.803
+com.amazonaws:aws-java-sdk-* = 1.11.805
 com.microsoft.azure:azure-storage = 8.4.0
 com.google.guava:guava = 27.0.1-jre
 com.palantir.common:streams = 1.9.1
