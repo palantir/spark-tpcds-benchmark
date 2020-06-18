@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: upgrade to spark 3.0.0
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/210
