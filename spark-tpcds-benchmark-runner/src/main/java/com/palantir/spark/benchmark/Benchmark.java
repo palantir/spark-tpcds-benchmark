@@ -177,11 +177,11 @@ public final class Benchmark {
 
     private List<Query> getQueries() {
         ImmutableList.Builder<Query> queries = ImmutableList.builder();
-        if (config.benchmarks().tpcds().enabled()) {
-            queries.addAll(sqlQuerySupplier.get());
-        }
         if (config.benchmarks().gensort().enabled()) {
             queries.add(new SortBenchmarkQuery(spark));
+        }
+        if (config.benchmarks().tpcds().enabled()) {
+            queries.addAll(sqlQuerySupplier.get());
         }
         return queries.build();
     }
