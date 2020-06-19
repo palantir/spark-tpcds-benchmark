@@ -12,6 +12,7 @@ org.assertj:* = 3.16.1
 org.immutables:* = 2.8.8
 org.apache.parquet:* = 1.12.0-palantir.7
 org.apache.hadoop:* = 3.2.1
+org.apache.spark:spark-hadoop-cloud_2.11 = 2.4.0.7.1.1.0-565
 org.apache.spark:* = 3.0.0
 org.junit.jupiter:* = 5.6.2
 org.mockito:* = 3.3.3
