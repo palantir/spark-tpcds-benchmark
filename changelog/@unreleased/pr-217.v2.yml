@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: Run gensort first so that we fail fast on committer issues
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/217
