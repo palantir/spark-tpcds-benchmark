@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: Rename some paths to be consistent with each other
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/213
