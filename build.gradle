@@ -58,6 +58,9 @@ allprojects {
         maven {
             url 'https://palantir.bintray.com/releases'
         }
+        maven {
+            url 'https://repository.cloudera.com/artifactory/cloudera-repos'
+        }
     }
 }
 
