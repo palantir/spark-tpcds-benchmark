@@ -62,7 +62,7 @@ public final class BenchmarkPaths {
     public String experimentResultLocation(int scale, String queryName) {
         return String.join(
                 File.separator,
-                "experiments",
+                "experiments_query_results",
                 experimentName,
                 String.format("scale=%d", scale),
                 StringUtils.removeEnd(queryName, ".sql"));
@@ -79,6 +79,6 @@ public final class BenchmarkPaths {
     }
 
     public String metricsDir() {
-        return String.join(File.separator, experimentName, "benchmark_results");
+        return String.join(File.separator, "benchmark_results", experimentName);
     }
 }
