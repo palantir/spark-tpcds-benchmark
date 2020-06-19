@@ -1,4 +1,4 @@
-com.amazonaws:aws-java-sdk-* = 1.11.805
+com.amazonaws:aws-java-sdk-* = 1.11.807
 com.microsoft.azure:azure-storage = 8.4.0
 com.fasterxml.jackson.*:* = 2.11.0
 com.google.guava:guava = 27.0.1-jre
