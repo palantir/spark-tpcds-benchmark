@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: Add hadoop-cloud jars to get the right s3 committers
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/221
