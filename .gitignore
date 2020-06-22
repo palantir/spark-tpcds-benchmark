@@ -26,6 +26,7 @@ bin
 
 # Package Files #
 *.jar
+!jars/**/*.jar
 *.war
 *.ear
 
