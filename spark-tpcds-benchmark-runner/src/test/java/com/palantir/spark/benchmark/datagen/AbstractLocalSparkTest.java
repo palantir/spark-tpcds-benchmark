@@ -36,6 +36,13 @@ public abstract class AbstractLocalSparkTest {
                 .master("local")
                 .config("spark.ui.enabled", false)
                 .config("spark.ui.showConsoleProgress", false)
+                // Adding these here so that we can make sure that these jars are in the classpath.
+                .config(
+                        "spark.sql.sources.commitProtocolClass",
+                        "org.apache.spark.internal.io.cloud.PathOutputCommitProtocol")
+                .config(
+                        "spark.sql.parquet.output.committer.class",
+                        "org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter")
                 .getOrCreate();
     }
 
