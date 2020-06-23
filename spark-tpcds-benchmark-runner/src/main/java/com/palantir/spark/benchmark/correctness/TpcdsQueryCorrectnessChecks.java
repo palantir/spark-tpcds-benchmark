@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,7 +56,12 @@ public final class TpcdsQueryCorrectnessChecks {
     }
 
     public void verifyCorrectness(
-            int scale, String queryName, String sqlStatement, StructType resultSchema, String resultsPath)
+            int scale,
+            String queryName,
+            UUID iterationId,
+            String sqlStatement,
+            StructType resultSchema,
+            String resultsPath)
             throws IOException {
         spark.sparkContext().setJobDescription(String.format("%s-table-hash-correctness", queryName));
         Dataset<Row> writtenResult =
@@ -68,7 +74,7 @@ public final class TpcdsQueryCorrectnessChecks {
                 .optional
                 .map(HashCode::asBytes)
                 .orElse(new byte[] {});
-        Path hashCodePath = new Path(paths.experimentCorrectnessHashesLocation(scale, queryName));
+        Path hashCodePath = new Path(paths.experimentCorrectnessHashesLocation(scale, iterationId, queryName));
         if (dataFileSystem.isFile(hashCodePath)) {
             try (InputStream previousHashCodeInput = dataFileSystem.open(hashCodePath)) {
                 byte[] previousHashCodeBytes = ByteStreams.toByteArray(previousHashCodeInput);

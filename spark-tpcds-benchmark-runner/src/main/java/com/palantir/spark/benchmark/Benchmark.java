@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -95,6 +96,7 @@ public final class Benchmark {
             sortDataGenerator.generate();
         }
         for (int iteration = 1; iteration <= config.benchmarks().iterations(); iteration++) {
+            UUID iterationId = UUID.randomUUID();
             log.info(
                     "Beginning benchmark iteration {} of {}.",
                     SafeArg.of("currentIteration", iteration),
@@ -109,7 +111,7 @@ public final class Benchmark {
                             SafeArg.of("queryName", query.getName()),
                             SafeArg.of("queryStatement", query.getSqlStatement().orElse("N/A")));
                     try {
-                        String resultLocation = paths.experimentResultLocation(scale, query.getName());
+                        String resultLocation = paths.experimentResultLocation(scale, iterationId, query.getName());
                         Path resultPath = new Path(resultLocation);
                         if (dataFileSystem.exists(resultPath) && !dataFileSystem.delete(resultPath, true)) {
                             throw new IllegalStateException(String.format(

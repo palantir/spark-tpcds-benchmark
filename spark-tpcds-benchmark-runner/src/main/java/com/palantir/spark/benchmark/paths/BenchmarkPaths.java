@@ -18,6 +18,7 @@ package com.palantir.spark.benchmark.paths;
 
 import com.palantir.spark.benchmark.constants.TpcdsTable;
 import java.io.File;
+import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 
 public final class BenchmarkPaths {
@@ -59,23 +60,30 @@ public final class BenchmarkPaths {
         return String.join(File.separator, rootDataDir(scale), "raw_parquet");
     }
 
-    public String experimentResultLocation(int scale, String queryName) {
+    public String experimentResultLocation(int scale, UUID iterationId, String queryName) {
         return String.join(
                 File.separator,
                 "experiments_query_results",
                 experimentName,
                 String.format("scale=%d", scale),
+                iterationId.toString(),
                 StringUtils.removeEnd(queryName, ".sql"));
     }
 
-    public String experimentCorrectnessHashesRoot(int scale) {
+    public String experimentCorrectnessHashesLocation(int scale, UUID iterationId, String queryName) {
         return String.join(
-                File.separator, "experiments_correctness_hashes", experimentName, String.format("scale=%d", scale));
+                File.separator,
+                experimentCorrectnessHashesRoot(scale, iterationId),
+                StringUtils.removeEnd(queryName, ".sql"));
     }
 
-    public String experimentCorrectnessHashesLocation(int scale, String queryName) {
+    private String experimentCorrectnessHashesRoot(int scale, UUID iterationId) {
         return String.join(
-                File.separator, experimentCorrectnessHashesRoot(scale), StringUtils.removeEnd(queryName, ".sql"));
+                File.separator,
+                "experiments_correctness_hashes",
+                experimentName,
+                String.format("scale=%d", scale),
+                iterationId.toString());
     }
 
     public String metricsDir() {
