@@ -18,12 +18,13 @@ package com.palantir.spark.benchmark.metrics;
 
 import com.google.common.base.Stopwatch;
 import com.palantir.logsafe.Preconditions;
-import com.palantir.spark.benchmark.config.BenchmarkRunnerConfig;
+import com.palantir.spark.benchmark.config.SparkConfiguration;
 import com.palantir.spark.benchmark.immutables.ImmutablesStyle;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
@@ -33,7 +34,7 @@ import scala.collection.JavaConverters;
 
 public final class BenchmarkMetrics {
 
-    private final BenchmarkRunnerConfig config;
+    private final SparkConfiguration config;
     private final String resolvedExperimentName;
     private final List<Row> metrics = new ArrayList<>();
     private final BenchmarkPaths paths;
@@ -41,7 +42,7 @@ public final class BenchmarkMetrics {
     private RunningQuery currentRunningQuery;
 
     public BenchmarkMetrics(
-            BenchmarkRunnerConfig config, String resolvedExperimentName, BenchmarkPaths paths, SparkSession spark) {
+            SparkConfiguration config, String resolvedExperimentName, BenchmarkPaths paths, SparkSession spark) {
         this.config = config;
         this.resolvedExperimentName = resolvedExperimentName;
         this.paths = paths;
@@ -69,9 +70,9 @@ public final class BenchmarkMetrics {
                 .queryName(currentRunningQuery.queryName())
                 .scale(currentRunningQuery.scale())
                 .sparkVersion(spark.version())
-                .executorInstances(config.spark().executorInstances())
-                .executorCores(config.spark().executorCores())
-                .executorMemoryMb(Utils.memoryStringToMb(config.spark().executorMemory()))
+                .executorInstances(config.executorInstances())
+                .executorCores(config.executorCores())
+                .executorMemoryMb(Utils.memoryStringToMb(config.executorMemory()))
                 .sparkConf(JavaConverters.mapAsJavaMapConverter(spark.conf().getAll())
                         .asJava())
                 .applicationId(spark.sparkContext().applicationId())
@@ -97,6 +98,10 @@ public final class BenchmarkMetrics {
                 .format("json")
                 .save(paths.metricsDir());
         metrics.clear();
+    }
+
+    public Dataset<Row> getMetrics() {
+        return spark.createDataFrame(metrics, BenchmarkMetric.SPARK_SCHEMA);
     }
 
     @Value.Immutable

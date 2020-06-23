@@ -46,4 +46,8 @@ public interface SparkConfiguration {
     }
 
     Map<String, String> sparkConf();
+
+    static ImmutableSparkConfiguration.Builder builder() {
+        return ImmutableSparkConfiguration.builder();
+    }
 }
