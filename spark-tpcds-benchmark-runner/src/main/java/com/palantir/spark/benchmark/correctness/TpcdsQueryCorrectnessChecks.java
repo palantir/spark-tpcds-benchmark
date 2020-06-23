@@ -57,8 +57,8 @@ public final class TpcdsQueryCorrectnessChecks {
 
     public void verifyCorrectness(
             int scale,
-            String queryName,
             UUID iterationId,
+            String queryName,
             String sqlStatement,
             StructType resultSchema,
             String resultsPath)

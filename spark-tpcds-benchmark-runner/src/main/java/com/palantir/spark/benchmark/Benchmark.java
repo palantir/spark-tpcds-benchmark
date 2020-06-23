@@ -143,6 +143,7 @@ public final class Benchmark {
                                     SafeArg.of("scale", scale));
                             correctness.verifyCorrectness(
                                     scale,
+                                    iterationId,
                                     query.getName(),
                                     query.getSqlStatement().get(),
                                     query.getSchema(),
