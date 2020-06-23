@@ -92,11 +92,7 @@ public final class BenchmarkMetrics {
     }
 
     public void flushMetrics() {
-        spark.createDataFrame(metrics, BenchmarkMetric.SPARK_SCHEMA)
-                .write()
-                .mode(SaveMode.Append)
-                .format("json")
-                .save(paths.metricsDir());
+        getMetrics().write().mode(SaveMode.Append).format("json").save(paths.metricsDir());
         metrics.clear();
     }
 
