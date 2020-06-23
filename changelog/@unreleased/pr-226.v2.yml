@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: Create unique uuid per iteration
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/226
