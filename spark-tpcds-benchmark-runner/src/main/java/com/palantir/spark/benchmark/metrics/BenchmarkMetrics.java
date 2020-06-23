@@ -16,14 +16,24 @@
 
 package com.palantir.spark.benchmark.metrics;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
 import com.palantir.logsafe.Preconditions;
+import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.spark.benchmark.config.SparkConfiguration;
 import com.palantir.spark.benchmark.immutables.ImmutablesStyle;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
-import java.util.ArrayList;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -33,12 +43,14 @@ import org.immutables.value.Value;
 import scala.collection.JavaConverters;
 
 public final class BenchmarkMetrics {
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
+    private static final Path LOCAL_BUFFER_DIR = Paths.get("var", "data", "metrics-buffer");
 
     private final SparkConfiguration config;
     private final String resolvedExperimentName;
-    private final List<Row> metrics = new ArrayList<>();
     private final BenchmarkPaths paths;
     private final SparkSession spark;
+    private final File localBuffer;
     private RunningQuery currentRunningQuery;
 
     public BenchmarkMetrics(
@@ -48,6 +60,11 @@ public final class BenchmarkMetrics {
         this.paths = paths;
         this.spark = spark;
         this.currentRunningQuery = null;
+
+        LOCAL_BUFFER_DIR.toFile().mkdirs();
+        this.localBuffer =
+                LOCAL_BUFFER_DIR.resolve(UUID.randomUUID().toString()).toFile();
+        clearBuffer();
     }
 
     public void startBenchmark(String queryName, int scale) {
@@ -65,7 +82,8 @@ public final class BenchmarkMetrics {
         long endTime = System.currentTimeMillis();
         long elapsed = stopped.elapsed(TimeUnit.MILLISECONDS);
         long startTime = endTime - elapsed;
-        metrics.add(BenchmarkMetric.builder()
+
+        BenchmarkMetric currentMetric = BenchmarkMetric.builder()
                 .experimentName(resolvedExperimentName)
                 .queryName(currentRunningQuery.queryName())
                 .scale(currentRunningQuery.scale())
@@ -79,8 +97,13 @@ public final class BenchmarkMetrics {
                 .experimentStartTimestampMillis(startTime)
                 .experimentEndTimestampMillis(endTime)
                 .durationMillis(elapsed)
-                .build()
-                .toRow());
+                .build();
+
+        List<BenchmarkMetric> newMetrics = ImmutableList.<BenchmarkMetric>builder()
+                .addAll(readFromBuffer())
+                .add(currentMetric)
+                .build();
+        writeToBuffer(newMetrics);
         currentRunningQuery = null;
     }
 
@@ -93,11 +116,33 @@ public final class BenchmarkMetrics {
 
     public void flushMetrics() {
         getMetrics().write().mode(SaveMode.Append).format("json").save(paths.metricsDir());
-        metrics.clear();
+        clearBuffer();
     }
 
     public Dataset<Row> getMetrics() {
-        return spark.createDataFrame(metrics, BenchmarkMetric.SPARK_SCHEMA);
+        List<Row> existingMetrics =
+                readFromBuffer().stream().map(BenchmarkMetric::toRow).collect(Collectors.toList());
+        return spark.createDataFrame(existingMetrics, BenchmarkMetric.SPARK_SCHEMA);
+    }
+
+    private List<BenchmarkMetric> readFromBuffer() {
+        try {
+            return OBJECT_MAPPER.readValue(localBuffer, new TypeReference<List<BenchmarkMetric>>() {});
+        } catch (IOException e) {
+            throw new SafeRuntimeException("Exception while reading metrics from local buffer", e);
+        }
+    }
+
+    private void writeToBuffer(List<BenchmarkMetric> metrics) {
+        try {
+            OBJECT_MAPPER.writeValue(localBuffer, metrics);
+        } catch (IOException e) {
+            throw new SafeRuntimeException("Exception while writing metrics to local buffer", e);
+        }
+    }
+
+    private void clearBuffer() {
+        writeToBuffer(ImmutableList.of());
     }
 
     @Value.Immutable
