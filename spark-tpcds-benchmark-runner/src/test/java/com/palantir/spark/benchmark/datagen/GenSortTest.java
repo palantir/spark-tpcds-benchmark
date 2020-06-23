@@ -30,6 +30,7 @@ import com.palantir.spark.benchmark.util.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.jupiter.api.Test;
@@ -80,7 +81,7 @@ public final class GenSortTest extends AbstractLocalSparkTest {
 
         SortBenchmarkQuery query = new SortBenchmarkQuery(sparkSession);
         // Should not throw. We can't assert sortedness since the data could be saved in multiple partitions.
-        query.save(paths.experimentResultLocation(scale, "foo", "gensort"));
+        query.save(paths.experimentResultLocation(scale, UUID.randomUUID(), "gensort"));
     }
 
     private List<String> read(Path path, String format) {
