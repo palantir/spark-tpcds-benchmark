@@ -156,13 +156,13 @@ public final class Benchmark {
                 });
                 log.info("Successfully ran benchmarks at scale of {} GB.", SafeArg.of("scale", scale));
             });
-            metrics.flushMetrics();
             log.info(
                     "Successfully finished an iteration of benchmarks at all scales. Completed {} iterations in total.",
                     SafeArg.of("completedIterations", iteration));
         }
         log.info("Successfully ran all benchmarks for the requested number of iterations");
 
+        metrics.flushMetrics();
         Dataset<Row> resultMetrics = spark.read().json(paths.metricsDir()).drop("sparkConf");
         log.info(
                 "Printing summary metrics (limit 1000):\n{}",

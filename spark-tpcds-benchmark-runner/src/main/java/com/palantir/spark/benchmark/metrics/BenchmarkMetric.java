@@ -16,6 +16,8 @@
 
 package com.palantir.spark.benchmark.metrics;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.ImmutableList;
 import com.palantir.spark.benchmark.immutables.ImmutablesStyle;
 import java.io.Serializable;
@@ -32,6 +34,8 @@ import scala.collection.JavaConverters;
 
 @Value.Immutable
 @ImmutablesStyle
+@JsonSerialize(as = ImmutableBenchmarkMetric.class)
+@JsonDeserialize(as = ImmutableBenchmarkMetric.class)
 public abstract class BenchmarkMetric implements Serializable {
 
     public static final StructType SPARK_SCHEMA = schema();
