@@ -83,6 +83,7 @@ public abstract class BenchmarkMetric implements Serializable {
 
     public final Row toRow() {
         return Row$.MODULE$.apply(JavaConverters.asScalaBufferConverter(ImmutableList.of(
+                        experimentName(),
                         queryName(),
                         scale(),
                         sparkVersion(),
