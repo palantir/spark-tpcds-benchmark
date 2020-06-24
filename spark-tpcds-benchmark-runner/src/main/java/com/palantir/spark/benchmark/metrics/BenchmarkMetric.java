@@ -34,8 +34,6 @@ import scala.collection.JavaConverters;
 @ImmutablesStyle
 public abstract class BenchmarkMetric implements Serializable {
 
-    public static final StructType SPARK_SCHEMA = schema();
-
     public abstract String experimentName();
 
     public abstract String queryName();

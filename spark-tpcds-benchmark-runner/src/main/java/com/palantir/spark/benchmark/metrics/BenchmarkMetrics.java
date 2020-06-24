@@ -17,7 +17,9 @@
 package com.palantir.spark.benchmark.metrics;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
 import com.palantir.logsafe.Preconditions;
+import com.palantir.logsafe.SafeArg;
 import com.palantir.spark.benchmark.config.SparkConfiguration;
 import com.palantir.spark.benchmark.immutables.ImmutablesStyle;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
@@ -28,15 +30,16 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.apache.spark.util.Utils;
 import org.immutables.value.Value;
 import scala.collection.JavaConverters;
 
 public final class BenchmarkMetrics {
-
     private final SparkConfiguration config;
     private final String resolvedExperimentName;
     private final List<Row> metrics = new ArrayList<>();
+    private final List<Row> verifications = new ArrayList<>();
     private final BenchmarkPaths paths;
     private final SparkSession spark;
     private RunningQuery currentRunningQuery;
@@ -59,8 +62,14 @@ public final class BenchmarkMetrics {
                 .build();
     }
 
-    public void stopBenchmark() {
+    public void stopBenchmark(String queryName, int scale) {
         Preconditions.checkArgument(currentRunningQuery != null, "No benchmark is currently running.");
+        Preconditions.checkArgument(
+                currentRunningQuery.queryName().equals(queryName) && currentRunningQuery.scale() == scale,
+                "Query names and scales must match",
+                SafeArg.of("currentRunningQuery", currentRunningQuery),
+                SafeArg.of("queryName", queryName),
+                SafeArg.of("scale", scale));
         Stopwatch stopped = currentRunningQuery.timer();
         long endTime = System.currentTimeMillis();
         long elapsed = stopped.elapsed(TimeUnit.MILLISECONDS);
@@ -84,11 +93,27 @@ public final class BenchmarkMetrics {
         currentRunningQuery = null;
     }
 
-    public void abortBenchmark() {
+    public void abortBenchmark(String queryName, int scale) {
         if (currentRunningQuery != null) {
+            Preconditions.checkState(
+                    currentRunningQuery.queryName().equals(queryName) && currentRunningQuery.scale() == scale,
+                    "Query names and scales must match",
+                    SafeArg.of("currentRunningQuery", currentRunningQuery),
+                    SafeArg.of("queryName", queryName),
+                    SafeArg.of("scale", scale));
             currentRunningQuery.timer().stop();
         }
         currentRunningQuery = null;
+    }
+
+    public void markVerificationFailed(String queryName, int scale) {
+        verifications.add(VerificationStatus.builder()
+                .experimentName(resolvedExperimentName)
+                .queryName(queryName)
+                .scale(scale)
+                .failedVerification(true)
+                .build()
+                .toRow());
     }
 
     public void flushMetrics() {
@@ -97,7 +122,15 @@ public final class BenchmarkMetrics {
     }
 
     public Dataset<Row> getMetrics() {
-        return spark.createDataFrame(metrics, BenchmarkMetric.SPARK_SCHEMA);
+        Dataset<Row> metricsDf = spark.createDataFrame(metrics, BenchmarkMetric.schema());
+        Dataset<Row> withVerifications = metricsDf.join(
+                spark.createDataFrame(verifications, VerificationStatus.schema()),
+                JavaConverters.asScalaBuffer(ImmutableList.of("experimentName", "queryName", "scale")),
+                "left");
+        // set "failedVerification" to false if not present
+        return withVerifications.withColumn(
+                "failedVerification",
+                functions.coalesce(withVerifications.col("failedVerification"), functions.lit(false)));
     }
 
     @Value.Immutable
@@ -107,6 +140,7 @@ public final class BenchmarkMetrics {
 
         int scale();
 
+        @Value.Auxiliary
         Stopwatch timer();
 
         final class Builder extends ImmutableRunningQuery.Builder {}
