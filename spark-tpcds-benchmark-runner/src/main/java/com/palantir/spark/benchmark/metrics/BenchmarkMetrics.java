@@ -17,23 +17,22 @@
 package com.palantir.spark.benchmark.metrics;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.base.Stopwatch;
 import com.palantir.logsafe.Preconditions;
 import com.palantir.logsafe.SafeArg;
-import com.palantir.logsafe.exceptions.SafeIllegalStateException;
+import com.palantir.logsafe.exceptions.SafeIllegalArgumentException;
 import com.palantir.spark.benchmark.config.SparkConfiguration;
 import com.palantir.spark.benchmark.immutables.ImmutablesStyle;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
+import com.palantir.spark.benchmark.queries.QuerySessionIdentifier;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
@@ -47,9 +46,12 @@ import org.mapdb.DBMaker;
 import org.mapdb.DataInput2;
 import org.mapdb.DataOutput2;
 import org.mapdb.Serializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
 
 public final class BenchmarkMetrics {
+    private static final Logger log = LoggerFactory.getLogger(BenchmarkMetrics.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
     private static final Path LOCAL_BUFFER_DIR = Paths.get("var", "data", "metrics-buffer");
 
@@ -58,8 +60,7 @@ public final class BenchmarkMetrics {
     private final BenchmarkPaths paths;
     private final SparkSession spark;
     private final DB mapDb;
-    private final Map<RunningQuery, BenchmarkMetric> metricsBuffer;
-    private final Map<RunningQuery, Stopwatch> timers = new HashMap<>();
+    private final Map<QuerySessionIdentifier, BenchmarkMetric> metricsBuffer;
     private Optional<RunningQuery> currentRunningQuery = Optional.empty();
 
     public BenchmarkMetrics(
@@ -70,23 +71,29 @@ public final class BenchmarkMetrics {
         this.spark = spark;
 
         LOCAL_BUFFER_DIR.toFile().mkdirs();
-        this.mapDb = DBMaker.fileDB(
-                        LOCAL_BUFFER_DIR.resolve(UUID.randomUUID().toString()).toFile())
+        this.mapDb = DBMaker.fileDB(LOCAL_BUFFER_DIR.resolve("mapdb").toFile())
                 .transactionEnable()
+                .fileMmapEnableIfSupported()
                 .closeOnJvmShutdown()
                 .make();
         this.metricsBuffer = mapDb.hashMap(
                         resolvedExperimentName,
-                        JacksonSerializer.create(RunningQuery.class),
+                        JacksonSerializer.create(QuerySessionIdentifier.class),
                         JacksonSerializer.create(BenchmarkMetric.class))
-                .create();
+                .createOrOpen();
+        if (!this.metricsBuffer.isEmpty()) {
+            log.warn("Found unflushed metrics in the buffer; attempting to flush");
+            flushMetrics();
+        }
     }
 
     public void startBenchmark(String queryName, int scale) {
         Preconditions.checkArgument(currentRunningQuery.isEmpty(), "Can only run one query at a time.");
-        currentRunningQuery = Optional.of(
-                RunningQuery.builder().queryName(queryName).scale(scale).build());
-        timers.put(currentRunningQuery.get(), Stopwatch.createStarted());
+        currentRunningQuery = Optional.of(RunningQuery.builder()
+                .queryName(queryName)
+                .scale(scale)
+                .timer(Stopwatch.createStarted())
+                .build());
     }
 
     public void stopBenchmark(String queryName, int scale) {
@@ -99,15 +106,12 @@ public final class BenchmarkMetrics {
                 SafeArg.of("queryName", queryName),
                 SafeArg.of("scale", scale));
 
-        Stopwatch stopped = Optional.ofNullable(timers.get(runningQuery))
-                .orElseThrow(() -> new SafeIllegalStateException(
-                        "Missing timer!", SafeArg.of("queryName", queryName), SafeArg.of("scale", scale)));
-        long endTime = System.currentTimeMillis();
-        long elapsed = stopped.elapsed(TimeUnit.MILLISECONDS);
-        long startTime = endTime - elapsed;
+        Instant endTime = Instant.now();
+        long elapsed = runningQuery.timer().elapsed(TimeUnit.MILLISECONDS);
+        Instant startTime = endTime.minus(Duration.ofMillis(elapsed));
 
-        metricsBuffer.put(
-                runningQuery,
+        writeToBuffer(
+                runningQuery.toIdentifier(),
                 BenchmarkMetric.builder()
                         .experimentName(resolvedExperimentName)
                         .queryName(runningQuery.queryName())
@@ -120,11 +124,10 @@ public final class BenchmarkMetrics {
                                         spark.conf().getAll())
                                 .asJava())
                         .applicationId(spark.sparkContext().applicationId())
-                        .experimentStartTimestampMillis(startTime)
-                        .experimentEndTimestampMillis(endTime)
+                        .experimentStartTimestampMillis(startTime.toEpochMilli())
+                        .experimentEndTimestampMillis(endTime.toEpochMilli())
                         .durationMillis(elapsed)
                         .build());
-        mapDb.commit();
         currentRunningQuery = Optional.empty();
     }
 
@@ -136,53 +139,61 @@ public final class BenchmarkMetrics {
                     SafeArg.of("currentRunningQuery", query),
                     SafeArg.of("queryName", queryName),
                     SafeArg.of("scale", scale));
-            Optional.ofNullable(timers.get(query)).map(Stopwatch::stop);
+            query.timer().stop();
         });
         currentRunningQuery = Optional.empty();
     }
 
     public void markVerificationFailed(String queryName, int scale) {
-        RunningQuery runningQuery =
-                RunningQuery.builder().queryName(queryName).scale(scale).build();
-        BenchmarkMetric metric = Optional.ofNullable(metricsBuffer.get(runningQuery))
-                .orElseThrow(() -> new SafeIllegalStateException(
+        QuerySessionIdentifier identifier = QuerySessionIdentifier.of(queryName, scale);
+        BenchmarkMetric metric = Optional.ofNullable(metricsBuffer.get(identifier))
+                .orElseThrow(() -> new SafeIllegalArgumentException(
                         "Cannot mark verification failure for non-existent result!",
-                        SafeArg.of("query", runningQuery)));
-        metricsBuffer.put(
-                runningQuery,
+                        SafeArg.of("identifier", identifier)));
+        writeToBuffer(
+                identifier,
                 BenchmarkMetric.builder().from(metric).failedVerification(true).build());
+    }
+
+    public void writeToBuffer(QuerySessionIdentifier identifier, BenchmarkMetric metric) {
+        metricsBuffer.put(identifier, metric);
         mapDb.commit();
     }
 
     public void flushMetrics() {
-        getMetrics().write().mode(SaveMode.Append).format("json").save(paths.metricsDir());
-        clearBuffer();
+        getMetricsDataset().write().mode(SaveMode.Append).format("json").save(paths.metricsDir());
+        metricsBuffer.clear();
+        mapDb.commit();
     }
 
-    public Dataset<Row> getMetrics() {
+    public Dataset<Row> getMetricsDataset() {
         return spark.createDataFrame(
                 metricsBuffer.values().stream().map(BenchmarkMetric::toRow).collect(Collectors.toList()),
                 BenchmarkMetric.schema());
     }
 
-    private void clearBuffer() {
-        metricsBuffer.clear();
-        mapDb.commit();
-    }
-
     @Value.Immutable
     @ImmutablesStyle
-    @JsonSerialize(as = ImmutableRunningQuery.class)
-    @JsonDeserialize(as = ImmutableRunningQuery.class)
     interface RunningQuery {
         String queryName();
 
         int scale();
 
+        @Value.Auxiliary
+        Stopwatch timer();
+
         final class Builder extends ImmutableRunningQuery.Builder {}
 
         static Builder builder() {
             return new Builder();
+        }
+
+        @Value.Lazy
+        default QuerySessionIdentifier toIdentifier() {
+            return QuerySessionIdentifier.builder()
+                    .queryName(queryName())
+                    .scale(scale())
+                    .build();
         }
     }
 

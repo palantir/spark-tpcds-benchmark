@@ -17,6 +17,7 @@
 package com.palantir.spark.benchmark.paths;
 
 import com.palantir.spark.benchmark.constants.TpcdsTable;
+import com.palantir.spark.benchmark.queries.QuerySessionIdentifier;
 import java.io.File;
 import org.apache.commons.lang3.StringUtils;
 
@@ -59,13 +60,15 @@ public final class BenchmarkPaths {
         return String.join(File.separator, rootDataDir(scale), "raw_parquet");
     }
 
-    public String experimentResultLocation(int scale, String queryName) {
+    public String experimentResultLocation(QuerySessionIdentifier identifier, int attempt) {
         return String.join(
                 File.separator,
                 "experiments_query_results",
                 experimentName,
-                String.format("scale=%d", scale),
-                StringUtils.removeEnd(queryName, ".sql"));
+                String.format("scale=%d", identifier.scale()),
+                StringUtils.removeEnd(identifier.queryName(), ".sql"),
+                String.format("session=%s", identifier.session()),
+                String.format("attempt=%d", attempt));
     }
 
     public String experimentCorrectnessHashesRoot(int scale) {

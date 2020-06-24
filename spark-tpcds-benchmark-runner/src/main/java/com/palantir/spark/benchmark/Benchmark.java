@@ -21,7 +21,6 @@ import com.github.rholder.retry.RetryerBuilder;
 import com.github.rholder.retry.StopStrategies;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.CharStreams;
 import com.palantir.logsafe.SafeArg;
@@ -32,6 +31,7 @@ import com.palantir.spark.benchmark.datagen.TpcdsDataGenerator;
 import com.palantir.spark.benchmark.metrics.BenchmarkMetrics;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.queries.Query;
+import com.palantir.spark.benchmark.queries.QuerySessionIdentifier;
 import com.palantir.spark.benchmark.queries.SortBenchmarkQuery;
 import com.palantir.spark.benchmark.queries.SqlQuery;
 import com.palantir.spark.benchmark.registration.TableRegistration;
@@ -39,6 +39,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -68,6 +70,7 @@ public final class Benchmark {
     private final SparkSession spark;
     private final FileSystem dataFileSystem;
     private final Supplier<ImmutableList<Query>> sqlQuerySupplier;
+    private final Map<QuerySessionIdentifier, Integer> attemptCounters = new ConcurrentHashMap<>();
 
     public Benchmark(
             BenchmarkRunnerConfig config,
@@ -151,19 +154,23 @@ public final class Benchmark {
     }
 
     private boolean attemptQuery(Query query, Integer scale) {
+        QuerySessionIdentifier identifier = QuerySessionIdentifier.of(query.getName(), scale);
+        int attempt =
+                attemptCounters.compute(identifier, (_key, oldAttempts) -> oldAttempts == null ? 0 : oldAttempts + 1);
         log.info(
-                "Running query {}: {}",
-                SafeArg.of("queryName", query.getName()),
+                "Running query {} (attempt {}): {}",
+                SafeArg.of("identifier", identifier),
+                SafeArg.of("attempt", attempt),
                 SafeArg.of("queryStatement", query.getSqlStatement().orElse("N/A")));
         try {
-            String resultLocation = paths.experimentResultLocation(scale, query.getName());
+            String resultLocation = paths.experimentResultLocation(identifier, attempt);
             Path resultPath = new Path(resultLocation);
             if (dataFileSystem.exists(resultPath) && !dataFileSystem.delete(resultPath, true)) {
                 throw new IllegalStateException(
                         String.format("Failed to clear experiment result destination directory at %s.", resultPath));
             }
 
-            spark.sparkContext().setJobDescription(String.format("%s-benchmark", query.getName()));
+            spark.sparkContext().setJobDescription(String.format("%s-benchmark-attempt-%d", query.getName(), attempt));
             metrics.startBenchmark(query.getName(), scale);
             boolean success = false;
             try {
@@ -217,7 +224,7 @@ public final class Benchmark {
     }
 
     private List<Query> getQueries() {
-        Builder<Query> queries = ImmutableList.builder();
+        ImmutableList.Builder<Query> queries = ImmutableList.builder();
         if (config.benchmarks().gensort().enabled()) {
             queries.add(new SortBenchmarkQuery(spark));
         }
@@ -228,7 +235,7 @@ public final class Benchmark {
     }
 
     private static ImmutableList<Query> buildSqlQueries(SparkSession spark) {
-        Builder<Query> queries = ImmutableList.builder();
+        ImmutableList.Builder<Query> queries = ImmutableList.builder();
         try (TarArchiveInputStream tarArchiveInputStream = new TarArchiveInputStream(
                         Benchmark.class.getClassLoader().getResourceAsStream("queries.tar"));
                 InputStreamReader tarArchiveReader =
