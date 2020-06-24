@@ -35,7 +35,7 @@ public interface QuerySessionIdentifier {
     @Value.Parameter
     int scale();
 
-    @Value.Derived
+    @Value.Default
     default String session() {
         return SESSION_ID;
     }
