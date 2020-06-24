@@ -18,6 +18,7 @@ package com.palantir.spark.benchmark.metrics;
 
 import com.google.common.collect.ImmutableList;
 import com.palantir.spark.benchmark.immutables.ImmutablesStyle;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.Row$;
@@ -31,6 +32,8 @@ import scala.collection.JavaConverters;
 @Value.Immutable
 @ImmutablesStyle
 public interface VerificationStatus {
+    String FAILED_VERIFICATION_COL_NAME = "failedVerification-" + UUID.randomUUID();
+
     String experimentName();
 
     String queryName();
@@ -44,7 +47,7 @@ public interface VerificationStatus {
                         new StructField("experimentName", DataTypes.StringType, false, Metadata.empty()),
                         new StructField("queryName", DataTypes.StringType, false, Metadata.empty()),
                         new StructField("scale", DataTypes.IntegerType, false, Metadata.empty()),
-                        new StructField("failedVerification", DataTypes.BooleanType, false, Metadata.empty()))
+                        new StructField(FAILED_VERIFICATION_COL_NAME, DataTypes.BooleanType, false, Metadata.empty()))
                 .toArray(StructField[]::new));
     }
 
