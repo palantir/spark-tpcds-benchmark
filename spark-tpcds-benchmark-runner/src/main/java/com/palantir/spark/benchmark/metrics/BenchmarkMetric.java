@@ -100,7 +100,8 @@ public abstract class BenchmarkMetric implements Serializable {
                         durationMillis(),
                         JavaConverters.mapAsScalaMapConverter(sparkConf()).asScala(),
                         new java.sql.Timestamp(experimentStartTimestampMillis()),
-                        new java.sql.Timestamp(experimentEndTimestampMillis())))
+                        new java.sql.Timestamp(experimentEndTimestampMillis()),
+                        failedVerification().orElse(false)))
                 .asScala());
     }
 

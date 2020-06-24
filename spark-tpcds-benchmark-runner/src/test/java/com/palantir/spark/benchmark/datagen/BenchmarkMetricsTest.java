@@ -39,6 +39,6 @@ public final class BenchmarkMetricsTest extends AbstractLocalSparkTest {
         assertThat(metrics.getMetrics().collectAsList()).hasSize(2);
         assertThat(metrics.getMetrics().selectExpr("failedVerification").collectAsList().stream()
                         .map(row -> row.getBoolean(0)))
-                .containsExactly(true, false);
+                .containsExactlyInAnyOrder(true, false);
     }
 }
