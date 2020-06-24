@@ -31,7 +31,9 @@ dependencies {
     implementation 'com.palantir.conjure.java.runtime:client-config'
     implementation 'org.apache.spark:spark-sql_2.12'
     implementation 'org.apache.spark:spark-hadoop-cloud_2.12'
-    implementation 'org.mapdb:mapdb'
+    implementation('org.mapdb:mapdb') {
+        exclude group: 'net.jpountz.lz4', module: 'lz4'
+    }
 
     implementation "org.apache.hadoop:hadoop-aws"
     implementation "org.apache.hadoop:hadoop-azure"
