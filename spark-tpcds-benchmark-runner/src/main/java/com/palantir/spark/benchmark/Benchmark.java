@@ -217,7 +217,8 @@ public final class Benchmark {
                 log.info(
                         "Failed to verify correctness of query {} at scale {}.",
                         SafeArg.of("queryName", query.getName()),
-                        SafeArg.of("scale", scale));
+                        SafeArg.of("scale", scale),
+                        e);
                 metrics.markVerificationFailed(query.getName(), scale);
             }
         }

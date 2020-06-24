@@ -197,7 +197,7 @@ public final class BenchmarkMetrics {
         }
     }
 
-    private static class JacksonSerializer<T> implements Serializer<T> {
+    private static final class JacksonSerializer<T> implements Serializer<T> {
         private final Class<T> valueType;
 
         private JacksonSerializer(Class<T> valueType) {
@@ -208,11 +208,13 @@ public final class BenchmarkMetrics {
             return new JacksonSerializer<>(valueType);
         }
 
+        @Override
         public void serialize(DataOutput2 out, Object value) throws IOException {
             out.write(OBJECT_MAPPER.writeValueAsBytes(value));
         }
 
-        public T deserialize(DataInput2 input, int available) throws IOException {
+        @Override
+        public T deserialize(DataInput2 input, int _available) throws IOException {
             return OBJECT_MAPPER.readValue(input, valueType);
         }
     }
