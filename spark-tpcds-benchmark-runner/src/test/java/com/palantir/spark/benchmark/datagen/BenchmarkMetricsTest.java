@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 
 public final class BenchmarkMetricsTest extends AbstractLocalSparkTest {
     @Test
-    public void testMetrics() throws Exception {
+    public void testMetrics() {
         BenchmarkMetrics metrics = new BenchmarkMetrics(
                 SparkConfiguration.builder().build(),
                 "test-experiment",

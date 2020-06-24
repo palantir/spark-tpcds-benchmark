@@ -16,8 +16,12 @@
 
 package com.palantir.spark.benchmark;
 
+import com.github.rholder.retry.RetryException;
+import com.github.rholder.retry.RetryerBuilder;
+import com.github.rholder.retry.StopStrategies;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.CharStreams;
 import com.palantir.logsafe.SafeArg;
@@ -35,6 +39,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -102,7 +107,9 @@ public final class Benchmark {
                 log.info("Beginning benchmarks at a new data scale of {}.", SafeArg.of("dataScale", scale));
                 registration.registerTpcdsTables(scale);
                 registration.registerGensortTable(scale);
-                getQueries().forEach(query -> runQuery(query, scale));
+                getQueries()
+                        .forEach(query -> runQueryWithRetries(
+                                query, scale, config.benchmarks().attemptsPerQuery()));
                 log.info("Successfully ran benchmarks at scale of {} GB.", SafeArg.of("scale", scale));
             });
             metrics.flushMetrics();
@@ -124,7 +131,26 @@ public final class Benchmark {
         log.info("Finished benchmark; exiting");
     }
 
-    private boolean runQuery(Query query, Integer scale) {
+    private void runQueryWithRetries(Query query, Integer scale, int numAttempts) {
+        try {
+            RetryerBuilder.<Boolean>newBuilder()
+                    .retryIfException()
+                    .retryIfRuntimeException()
+                    .retryIfResult(succeeded -> succeeded == null || !succeeded)
+                    .withStopStrategy(StopStrategies.stopAfterAttempt(numAttempts))
+                    .build()
+                    .call(() -> attemptQuery(query, scale));
+        } catch (RetryException | ExecutionException e) {
+            log.error(
+                    "Failed to execute query {} at scale {} on all {} attempts",
+                    SafeArg.of("query", query.getName()),
+                    SafeArg.of("scale", scale),
+                    SafeArg.of("numAttempts", numAttempts),
+                    e);
+        }
+    }
+
+    private boolean attemptQuery(Query query, Integer scale) {
         log.info(
                 "Running query {}: {}",
                 SafeArg.of("queryName", query.getName()),
@@ -159,7 +185,7 @@ public final class Benchmark {
             return true;
         } catch (Exception e) {
             log.error(
-                    "Caught an exception while running query {} at scale {}.",
+                    "Caught an exception while running query {} at scale {}; may re-attempt.",
                     SafeArg.of("queryName", query.getName()),
                     SafeArg.of("scale", scale),
                     e);
@@ -191,7 +217,7 @@ public final class Benchmark {
     }
 
     private List<Query> getQueries() {
-        ImmutableList.Builder<Query> queries = ImmutableList.builder();
+        Builder<Query> queries = ImmutableList.builder();
         if (config.benchmarks().gensort().enabled()) {
             queries.add(new SortBenchmarkQuery(spark));
         }
@@ -202,7 +228,7 @@ public final class Benchmark {
     }
 
     private static ImmutableList<Query> buildSqlQueries(SparkSession spark) {
-        ImmutableList.Builder<Query> queries = ImmutableList.builder();
+        Builder<Query> queries = ImmutableList.builder();
         try (TarArchiveInputStream tarArchiveInputStream = new TarArchiveInputStream(
                         Benchmark.class.getClassLoader().getResourceAsStream("queries.tar"));
                 InputStreamReader tarArchiveReader =
