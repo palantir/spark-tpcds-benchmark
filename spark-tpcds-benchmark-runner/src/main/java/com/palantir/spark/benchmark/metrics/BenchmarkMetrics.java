@@ -52,14 +52,12 @@ import scala.collection.JavaConverters;
 
 public final class BenchmarkMetrics {
     private static final Logger log = LoggerFactory.getLogger(BenchmarkMetrics.class);
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
-    private static final Path LOCAL_BUFFER_DIR = Paths.get("var", "data", "metrics-buffer");
+    private static final DB MAP_DB = initializeMapDb();
 
     private final SparkConfiguration config;
     private final String resolvedExperimentName;
     private final BenchmarkPaths paths;
     private final SparkSession spark;
-    private final DB mapDb;
     private final Map<QuerySessionIdentifier, BenchmarkMetric> metricsBuffer;
     private Optional<RunningQuery> currentRunningQuery = Optional.empty();
 
@@ -69,14 +67,7 @@ public final class BenchmarkMetrics {
         this.resolvedExperimentName = resolvedExperimentName;
         this.paths = paths;
         this.spark = spark;
-
-        LOCAL_BUFFER_DIR.toFile().mkdirs();
-        this.mapDb = DBMaker.fileDB(LOCAL_BUFFER_DIR.resolve("mapdb").toFile())
-                .transactionEnable()
-                .fileMmapEnableIfSupported()
-                .closeOnJvmShutdown()
-                .make();
-        this.metricsBuffer = mapDb.hashMap(
+        this.metricsBuffer = MAP_DB.hashMap(
                         resolvedExperimentName,
                         JacksonSerializer.create(QuerySessionIdentifier.class),
                         JacksonSerializer.create(BenchmarkMetric.class))
@@ -85,6 +76,16 @@ public final class BenchmarkMetrics {
             log.warn("Found unflushed metrics in the buffer; attempting to flush");
             flushMetrics();
         }
+    }
+
+    private static DB initializeMapDb() {
+        Path localBufferDir = Paths.get("var", "data", "metrics-buffer");
+        localBufferDir.toFile().mkdirs();
+        return DBMaker.fileDB(localBufferDir.resolve("mapdb").toFile())
+                .transactionEnable()
+                .fileMmapEnableIfSupported()
+                .closeOnJvmShutdown()
+                .make();
     }
 
     public void startBenchmark(String queryName, int scale) {
@@ -157,13 +158,13 @@ public final class BenchmarkMetrics {
 
     public void writeToBuffer(QuerySessionIdentifier identifier, BenchmarkMetric metric) {
         metricsBuffer.put(identifier, metric);
-        mapDb.commit();
+        MAP_DB.commit();
     }
 
     public void flushMetrics() {
         getMetricsDataset().write().mode(SaveMode.Append).format("json").save(paths.metricsDir());
         metricsBuffer.clear();
-        mapDb.commit();
+        MAP_DB.commit();
     }
 
     public Dataset<Row> getMetricsDataset() {
@@ -198,6 +199,7 @@ public final class BenchmarkMetrics {
     }
 
     private static final class JacksonSerializer<T> implements Serializer<T> {
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
         private final Class<T> valueType;
 
         private JacksonSerializer(Class<T> valueType) {
