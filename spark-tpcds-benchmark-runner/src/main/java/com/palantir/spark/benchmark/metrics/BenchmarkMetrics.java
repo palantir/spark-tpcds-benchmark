@@ -16,22 +16,23 @@
 
 package com.palantir.spark.benchmark.metrics;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableList;
 import com.palantir.logsafe.Preconditions;
-import com.palantir.logsafe.exceptions.SafeRuntimeException;
+import com.palantir.logsafe.SafeArg;
+import com.palantir.logsafe.exceptions.SafeIllegalArgumentException;
 import com.palantir.spark.benchmark.config.SparkConfiguration;
 import com.palantir.spark.benchmark.immutables.ImmutablesStyle;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
-import java.io.File;
+import com.palantir.spark.benchmark.queries.QuerySessionIdentifier;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.UUID;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
@@ -40,18 +41,25 @@ import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.util.Utils;
 import org.immutables.value.Value;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
+import org.mapdb.DataInput2;
+import org.mapdb.DataOutput2;
+import org.mapdb.Serializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
 
 public final class BenchmarkMetrics {
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
-    private static final Path LOCAL_BUFFER_DIR = Paths.get("var", "data", "metrics-buffer");
+    private static final Logger log = LoggerFactory.getLogger(BenchmarkMetrics.class);
+    private static final DB MAP_DB = initializeMapDb();
 
     private final SparkConfiguration config;
     private final String resolvedExperimentName;
     private final BenchmarkPaths paths;
     private final SparkSession spark;
-    private final File localBuffer;
-    private RunningQuery currentRunningQuery;
+    private final Map<QuerySessionIdentifier, BenchmarkMetric> metricsBuffer;
+    private Optional<RunningQuery> currentRunningQuery = Optional.empty();
 
     public BenchmarkMetrics(
             SparkConfiguration config, String resolvedExperimentName, BenchmarkPaths paths, SparkSession spark) {
@@ -59,90 +67,110 @@ public final class BenchmarkMetrics {
         this.resolvedExperimentName = resolvedExperimentName;
         this.paths = paths;
         this.spark = spark;
-        this.currentRunningQuery = null;
+        this.metricsBuffer = MAP_DB.hashMap(
+                        resolvedExperimentName,
+                        JacksonSerializer.create(QuerySessionIdentifier.class),
+                        JacksonSerializer.create(BenchmarkMetric.class))
+                .createOrOpen();
+        if (!this.metricsBuffer.isEmpty()) {
+            log.warn("Found unflushed metrics in the buffer; attempting to flush");
+            flushMetrics();
+        }
+    }
 
-        LOCAL_BUFFER_DIR.toFile().mkdirs();
-        this.localBuffer =
-                LOCAL_BUFFER_DIR.resolve(UUID.randomUUID().toString()).toFile();
-        clearBuffer();
+    private static DB initializeMapDb() {
+        Path localBufferDir = Paths.get("var", "data", "metrics-buffer");
+        localBufferDir.toFile().mkdirs();
+        return DBMaker.fileDB(localBufferDir.resolve("mapdb").toFile())
+                .transactionEnable()
+                .fileMmapEnableIfSupported()
+                .closeOnJvmShutdown()
+                .make();
     }
 
     public void startBenchmark(String queryName, int scale) {
-        Preconditions.checkArgument(currentRunningQuery == null, "Can only run one query at a time.");
-        currentRunningQuery = RunningQuery.builder()
+        Preconditions.checkArgument(currentRunningQuery.isEmpty(), "Can only run one query at a time.");
+        currentRunningQuery = Optional.of(RunningQuery.builder()
                 .queryName(queryName)
                 .scale(scale)
                 .timer(Stopwatch.createStarted())
-                .build();
+                .build());
     }
 
-    public void stopBenchmark() {
-        Preconditions.checkArgument(currentRunningQuery != null, "No benchmark is currently running.");
-        Stopwatch stopped = currentRunningQuery.timer();
-        long endTime = System.currentTimeMillis();
-        long elapsed = stopped.elapsed(TimeUnit.MILLISECONDS);
-        long startTime = endTime - elapsed;
+    public void stopBenchmark(String queryName, int scale) {
+        Preconditions.checkArgument(currentRunningQuery.isPresent(), "No benchmark is currently running.");
+        RunningQuery runningQuery = currentRunningQuery.get();
+        Preconditions.checkArgument(
+                runningQuery.queryName().equals(queryName) && runningQuery.scale() == scale,
+                "Query names and scales must match",
+                SafeArg.of("currentRunningQuery", runningQuery),
+                SafeArg.of("queryName", queryName),
+                SafeArg.of("scale", scale));
 
-        BenchmarkMetric currentMetric = BenchmarkMetric.builder()
-                .experimentName(resolvedExperimentName)
-                .queryName(currentRunningQuery.queryName())
-                .scale(currentRunningQuery.scale())
-                .sparkVersion(spark.version())
-                .executorInstances(config.executorInstances())
-                .executorCores(config.executorCores())
-                .executorMemoryMb(Utils.memoryStringToMb(config.executorMemory()))
-                .sparkConf(JavaConverters.mapAsJavaMapConverter(spark.conf().getAll())
-                        .asJava())
-                .applicationId(spark.sparkContext().applicationId())
-                .experimentStartTimestampMillis(startTime)
-                .experimentEndTimestampMillis(endTime)
-                .durationMillis(elapsed)
-                .build();
+        Instant endTime = Instant.now();
+        long elapsed = runningQuery.timer().elapsed(TimeUnit.MILLISECONDS);
+        Instant startTime = endTime.minus(Duration.ofMillis(elapsed));
 
-        List<BenchmarkMetric> newMetrics = ImmutableList.<BenchmarkMetric>builder()
-                .addAll(readFromBuffer())
-                .add(currentMetric)
-                .build();
-        writeToBuffer(newMetrics);
-        currentRunningQuery = null;
+        writeToBuffer(
+                runningQuery.toIdentifier(),
+                BenchmarkMetric.builder()
+                        .experimentName(resolvedExperimentName)
+                        .queryName(runningQuery.queryName())
+                        .scale(runningQuery.scale())
+                        .sparkVersion(spark.version())
+                        .executorInstances(config.executorInstances())
+                        .executorCores(config.executorCores())
+                        .executorMemoryMb(Utils.memoryStringToMb(config.executorMemory()))
+                        .sparkConf(JavaConverters.mapAsJavaMapConverter(
+                                        spark.conf().getAll())
+                                .asJava())
+                        .applicationId(spark.sparkContext().applicationId())
+                        .experimentStartTimestampMillis(startTime.toEpochMilli())
+                        .experimentEndTimestampMillis(endTime.toEpochMilli())
+                        .durationMillis(elapsed)
+                        .build());
+        currentRunningQuery = Optional.empty();
     }
 
-    public void abortBenchmark() {
-        if (currentRunningQuery != null) {
-            currentRunningQuery.timer().stop();
-        }
-        currentRunningQuery = null;
+    public void abortBenchmark(String queryName, int scale) {
+        currentRunningQuery.ifPresent(query -> {
+            Preconditions.checkState(
+                    query.queryName().equals(queryName) && query.scale() == scale,
+                    "Query names and scales must match",
+                    SafeArg.of("currentRunningQuery", query),
+                    SafeArg.of("queryName", queryName),
+                    SafeArg.of("scale", scale));
+            query.timer().stop();
+        });
+        currentRunningQuery = Optional.empty();
+    }
+
+    public void markVerificationFailed(String queryName, int scale) {
+        QuerySessionIdentifier identifier = QuerySessionIdentifier.of(queryName, scale);
+        BenchmarkMetric metric = Optional.ofNullable(metricsBuffer.get(identifier))
+                .orElseThrow(() -> new SafeIllegalArgumentException(
+                        "Cannot mark verification failure for non-existent result!",
+                        SafeArg.of("identifier", identifier)));
+        writeToBuffer(
+                identifier,
+                BenchmarkMetric.builder().from(metric).failedVerification(true).build());
+    }
+
+    public void writeToBuffer(QuerySessionIdentifier identifier, BenchmarkMetric metric) {
+        metricsBuffer.put(identifier, metric);
+        MAP_DB.commit();
     }
 
     public void flushMetrics() {
-        getMetrics().write().mode(SaveMode.Append).format("json").save(paths.metricsDir());
-        clearBuffer();
+        getMetricsDataset().write().mode(SaveMode.Append).format("json").save(paths.metricsDir());
+        metricsBuffer.clear();
+        MAP_DB.commit();
     }
 
-    public Dataset<Row> getMetrics() {
-        List<Row> existingMetrics =
-                readFromBuffer().stream().map(BenchmarkMetric::toRow).collect(Collectors.toList());
-        return spark.createDataFrame(existingMetrics, BenchmarkMetric.SPARK_SCHEMA);
-    }
-
-    private List<BenchmarkMetric> readFromBuffer() {
-        try {
-            return OBJECT_MAPPER.readValue(localBuffer, new TypeReference<List<BenchmarkMetric>>() {});
-        } catch (IOException e) {
-            throw new SafeRuntimeException("Exception while reading metrics from local buffer", e);
-        }
-    }
-
-    private void writeToBuffer(List<BenchmarkMetric> metrics) {
-        try {
-            OBJECT_MAPPER.writeValue(localBuffer, metrics);
-        } catch (IOException e) {
-            throw new SafeRuntimeException("Exception while writing metrics to local buffer", e);
-        }
-    }
-
-    private void clearBuffer() {
-        writeToBuffer(ImmutableList.of());
+    public Dataset<Row> getMetricsDataset() {
+        return spark.createDataFrame(
+                metricsBuffer.values().stream().map(BenchmarkMetric::toRow).collect(Collectors.toList()),
+                BenchmarkMetric.schema());
     }
 
     @Value.Immutable
@@ -152,12 +180,44 @@ public final class BenchmarkMetrics {
 
         int scale();
 
+        @Value.Auxiliary
         Stopwatch timer();
 
         final class Builder extends ImmutableRunningQuery.Builder {}
 
         static Builder builder() {
             return new Builder();
+        }
+
+        @Value.Lazy
+        default QuerySessionIdentifier toIdentifier() {
+            return QuerySessionIdentifier.builder()
+                    .queryName(queryName())
+                    .scale(scale())
+                    .build();
+        }
+    }
+
+    private static final class JacksonSerializer<T> implements Serializer<T> {
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
+        private final Class<T> valueType;
+
+        private JacksonSerializer(Class<T> valueType) {
+            this.valueType = valueType;
+        }
+
+        public static <T> JacksonSerializer<T> create(Class<T> valueType) {
+            return new JacksonSerializer<>(valueType);
+        }
+
+        @Override
+        public void serialize(DataOutput2 out, Object value) throws IOException {
+            out.write(OBJECT_MAPPER.writeValueAsBytes(value));
+        }
+
+        @Override
+        public T deserialize(DataInput2 input, int _available) throws IOException {
+            return OBJECT_MAPPER.readValue(input, valueType);
         }
     }
 }

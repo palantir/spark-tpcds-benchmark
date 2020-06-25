@@ -1,0 +1,8 @@
+type: improvement
+improvement:
+  description: 'Attempt to record as much useful information as possible from runs,
+    and reduce transient errors. We accomplish this by: using a unique filesystem
+    paths for all outputs, recording verification as a column rather than throwing
+    on failure, and retrying failed queries.'
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/231

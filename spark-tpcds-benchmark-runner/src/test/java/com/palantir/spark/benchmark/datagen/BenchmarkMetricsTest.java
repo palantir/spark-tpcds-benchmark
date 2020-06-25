@@ -25,16 +25,20 @@ import org.junit.jupiter.api.Test;
 
 public final class BenchmarkMetricsTest extends AbstractLocalSparkTest {
     @Test
-    public void testMetrics() throws Exception {
+    public void testMetrics() {
         BenchmarkMetrics metrics = new BenchmarkMetrics(
                 SparkConfiguration.builder().build(),
                 "test-experiment",
                 new BenchmarkPaths("test-experiment"),
                 sparkSession);
         metrics.startBenchmark("q1", 10);
-        metrics.stopBenchmark();
+        metrics.stopBenchmark("q1", 10);
+        metrics.markVerificationFailed("q1", 10);
         metrics.startBenchmark("q2", 10);
-        metrics.stopBenchmark();
-        assertThat(metrics.getMetrics().collectAsList()).hasSize(2);
+        metrics.stopBenchmark("q2", 10);
+        assertThat(metrics.getMetricsDataset().collectAsList()).hasSize(2);
+        assertThat(metrics.getMetricsDataset().selectExpr("failedVerification").collectAsList().stream()
+                        .map(row -> row.getBoolean(0)))
+                .containsExactlyInAnyOrder(true, false);
     }
 }

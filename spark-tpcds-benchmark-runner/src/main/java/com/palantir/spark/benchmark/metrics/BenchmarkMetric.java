@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.palantir.spark.benchmark.immutables.ImmutablesStyle;
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.Row$;
@@ -37,8 +38,6 @@ import scala.collection.JavaConverters;
 @JsonSerialize(as = ImmutableBenchmarkMetric.class)
 @JsonDeserialize(as = ImmutableBenchmarkMetric.class)
 public abstract class BenchmarkMetric implements Serializable {
-
-    public static final StructType SPARK_SCHEMA = schema();
 
     public abstract String experimentName();
 
@@ -64,6 +63,8 @@ public abstract class BenchmarkMetric implements Serializable {
 
     public abstract long experimentEndTimestampMillis();
 
+    public abstract Optional<Boolean> failedVerification();
+
     public static StructType schema() {
         return new StructType(Stream.of(
                         new StructField("experimentName", DataTypes.StringType, false, Metadata.empty()),
@@ -81,7 +82,8 @@ public abstract class BenchmarkMetric implements Serializable {
                                 true,
                                 Metadata.empty()),
                         new StructField("experimentStartTimestamp", DataTypes.TimestampType, false, Metadata.empty()),
-                        new StructField("experimentEndTimestamp", DataTypes.TimestampType, false, Metadata.empty()))
+                        new StructField("experimentEndTimestamp", DataTypes.TimestampType, false, Metadata.empty()),
+                        new StructField("failedVerification", DataTypes.BooleanType, true, Metadata.empty()))
                 .toArray(StructField[]::new));
     }
 
@@ -98,7 +100,8 @@ public abstract class BenchmarkMetric implements Serializable {
                         durationMillis(),
                         JavaConverters.mapAsScalaMapConverter(sparkConf()).asScala(),
                         new java.sql.Timestamp(experimentStartTimestampMillis()),
-                        new java.sql.Timestamp(experimentEndTimestampMillis())))
+                        new java.sql.Timestamp(experimentEndTimestampMillis()),
+                        failedVerification().orElse(false)))
                 .asScala());
     }
 

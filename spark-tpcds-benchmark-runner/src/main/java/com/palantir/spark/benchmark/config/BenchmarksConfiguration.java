@@ -31,6 +31,11 @@ public interface BenchmarksConfiguration {
 
     int iterations();
 
+    @Value.Default
+    default int attemptsPerQuery() {
+        return 3;
+    }
+
     SourceBenchmarksConfiguration tpcds();
 
     SourceBenchmarksConfiguration gensort();

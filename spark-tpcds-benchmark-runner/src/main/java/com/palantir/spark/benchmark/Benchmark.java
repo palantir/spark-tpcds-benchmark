@@ -16,6 +16,9 @@
 
 package com.palantir.spark.benchmark;
 
+import com.github.rholder.retry.RetryException;
+import com.github.rholder.retry.RetryerBuilder;
+import com.github.rholder.retry.StopStrategies;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -28,6 +31,7 @@ import com.palantir.spark.benchmark.datagen.TpcdsDataGenerator;
 import com.palantir.spark.benchmark.metrics.BenchmarkMetrics;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.queries.Query;
+import com.palantir.spark.benchmark.queries.QuerySessionIdentifier;
 import com.palantir.spark.benchmark.queries.SortBenchmarkQuery;
 import com.palantir.spark.benchmark.queries.SqlQuery;
 import com.palantir.spark.benchmark.registration.TableRegistration;
@@ -35,6 +39,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -50,7 +57,6 @@ import org.slf4j.LoggerFactory;
 public final class Benchmark {
 
     private static final Logger log = LoggerFactory.getLogger(Benchmark.class);
-
     private static final ImmutableSet<String> BLACKLISTED_QUERIES =
             ImmutableSet.of("q23b.sql", "q39a.sql", "q39b.sql", "q14b.sql", "q49.sql", "q64.sql", "q77.sql");
 
@@ -64,6 +70,7 @@ public final class Benchmark {
     private final SparkSession spark;
     private final FileSystem dataFileSystem;
     private final Supplier<ImmutableList<Query>> sqlQuerySupplier;
+    private final Map<QuerySessionIdentifier, Integer> attemptCounters = new ConcurrentHashMap<>();
 
     public Benchmark(
             BenchmarkRunnerConfig config,
@@ -103,57 +110,9 @@ public final class Benchmark {
                 log.info("Beginning benchmarks at a new data scale of {}.", SafeArg.of("dataScale", scale));
                 registration.registerTpcdsTables(scale);
                 registration.registerGensortTable(scale);
-                getQueries().forEach(query -> {
-                    log.info(
-                            "Running query {}: {}",
-                            SafeArg.of("queryName", query.getName()),
-                            SafeArg.of("queryStatement", query.getSqlStatement().orElse("N/A")));
-                    try {
-                        String resultLocation = paths.experimentResultLocation(scale, query.getName());
-                        Path resultPath = new Path(resultLocation);
-                        if (dataFileSystem.exists(resultPath) && !dataFileSystem.delete(resultPath, true)) {
-                            throw new IllegalStateException(String.format(
-                                    "Failed to clear experiment result destination directory at %s.", resultPath));
-                        }
-
-                        spark.sparkContext().setJobDescription(String.format("%s-benchmark", query.getName()));
-                        metrics.startBenchmark(query.getName(), scale);
-                        boolean success = false;
-                        try {
-                            query.save(resultLocation);
-                            success = true;
-                        } finally {
-                            if (success) {
-                                metrics.stopBenchmark();
-                            } else {
-                                metrics.abortBenchmark();
-                            }
-                        }
-
-                        log.info(
-                                "Successfully ran query {} at scale {}.",
-                                SafeArg.of("queryName", query.getName()),
-                                SafeArg.of("scale", scale));
-                        if (query.getSqlStatement().isPresent()) {
-                            log.info(
-                                    "Verifying correctness of query {} at scale {}.",
-                                    SafeArg.of("queryName", query.getName()),
-                                    SafeArg.of("scale", scale));
-                            correctness.verifyCorrectness(
-                                    scale,
-                                    query.getName(),
-                                    query.getSqlStatement().get(),
-                                    query.getSchema(),
-                                    resultLocation);
-                            log.info(
-                                    "Successfully verified correctness of query {} at scale {}.",
-                                    SafeArg.of("queryName", query.getName()),
-                                    SafeArg.of("scale", scale));
-                        }
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+                getQueries()
+                        .forEach(query -> runQueryWithRetries(
+                                query, scale, config.benchmarks().attemptsPerQuery()));
                 log.info("Successfully ran benchmarks at scale of {} GB.", SafeArg.of("scale", scale));
             });
             log.info(
@@ -173,6 +132,96 @@ public final class Benchmark {
                                 .agg(functions.avg("durationMillis"), functions.max("durationMillis"))
                                 .showString(1000, 20, false)));
         log.info("Finished benchmark; exiting");
+    }
+
+    private void runQueryWithRetries(Query query, Integer scale, int numAttempts) {
+        try {
+            RetryerBuilder.<Boolean>newBuilder()
+                    .retryIfException()
+                    .retryIfRuntimeException()
+                    .retryIfResult(succeeded -> succeeded == null || !succeeded)
+                    .withStopStrategy(StopStrategies.stopAfterAttempt(numAttempts))
+                    .build()
+                    .call(() -> attemptQuery(query, scale));
+        } catch (RetryException | ExecutionException e) {
+            log.error(
+                    "Failed to execute query {} at scale {} on all {} attempts",
+                    SafeArg.of("query", query.getName()),
+                    SafeArg.of("scale", scale),
+                    SafeArg.of("numAttempts", numAttempts),
+                    e);
+        }
+    }
+
+    private boolean attemptQuery(Query query, Integer scale) {
+        QuerySessionIdentifier identifier = QuerySessionIdentifier.of(query.getName(), scale);
+        int attempt =
+                attemptCounters.compute(identifier, (_key, oldAttempts) -> oldAttempts == null ? 0 : oldAttempts + 1);
+        log.info(
+                "Running query {} (attempt {}): {}",
+                SafeArg.of("identifier", identifier),
+                SafeArg.of("attempt", attempt),
+                SafeArg.of("queryStatement", query.getSqlStatement().orElse("N/A")));
+        try {
+            String resultLocation = paths.experimentResultLocation(identifier, attempt);
+            Path resultPath = new Path(resultLocation);
+            if (dataFileSystem.exists(resultPath) && !dataFileSystem.delete(resultPath, true)) {
+                throw new IllegalStateException(
+                        String.format("Failed to clear experiment result destination directory at %s.", resultPath));
+            }
+
+            spark.sparkContext().setJobDescription(String.format("%s-benchmark-attempt-%d", query.getName(), attempt));
+            metrics.startBenchmark(query.getName(), scale);
+            boolean success = false;
+            try {
+                query.save(resultLocation);
+                success = true;
+            } finally {
+                if (success) {
+                    metrics.stopBenchmark(query.getName(), scale);
+                } else {
+                    metrics.abortBenchmark(query.getName(), scale);
+                }
+            }
+
+            log.info(
+                    "Successfully ran query {} at scale {}.",
+                    SafeArg.of("queryName", query.getName()),
+                    SafeArg.of("scale", scale));
+            verifyCorrectness(query, scale, resultLocation);
+            return true;
+        } catch (Exception e) {
+            log.error(
+                    "Caught an exception while running query {} at scale {}; may re-attempt.",
+                    SafeArg.of("queryName", query.getName()),
+                    SafeArg.of("scale", scale),
+                    e);
+            return false;
+        }
+    }
+
+    private void verifyCorrectness(Query query, Integer scale, String resultLocation) {
+        if (query.getSqlStatement().isPresent()) {
+            log.info(
+                    "Verifying correctness of query {} at scale {}.",
+                    SafeArg.of("queryName", query.getName()),
+                    SafeArg.of("scale", scale));
+            try {
+                correctness.verifyCorrectness(
+                        scale, query.getName(), query.getSqlStatement().get(), query.getSchema(), resultLocation);
+                log.info(
+                        "Successfully verified correctness of query {} at scale {}.",
+                        SafeArg.of("queryName", query.getName()),
+                        SafeArg.of("scale", scale));
+            } catch (IOException | RuntimeException e) {
+                log.info(
+                        "Failed to verify correctness of query {} at scale {}.",
+                        SafeArg.of("queryName", query.getName()),
+                        SafeArg.of("scale", scale),
+                        e);
+                metrics.markVerificationFailed(query.getName(), scale);
+            }
+        }
     }
 
     private List<Query> getQueries() {
