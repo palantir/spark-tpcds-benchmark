@@ -1,0 +1,5 @@
+type: fix
+fix:
+  description: Generate new QueryIdentifier for each iteration
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/236
