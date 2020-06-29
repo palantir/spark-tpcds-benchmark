@@ -18,20 +18,16 @@ package com.palantir.spark.benchmark.queries;
 
 import java.util.Optional;
 import java.util.function.Supplier;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 
 public final class SortBenchmarkQuery implements Query {
     public static final String TABLE_NAME = "gensort_data";
 
-    private final SparkSession spark;
-    private final Supplier<Dataset<Row>> datasetSupplier;
+    private final Supplier<SparkSession> sparkSessionSupplier;
 
-    public SortBenchmarkQuery(SparkSession spark) {
-        this.spark = spark;
-        this.datasetSupplier = this::buildDataset;
+    public SortBenchmarkQuery(Supplier<SparkSession> sparkSessionSupplier) {
+        this.sparkSessionSupplier = sparkSessionSupplier;
     }
 
     @Override
@@ -51,10 +47,12 @@ public final class SortBenchmarkQuery implements Query {
 
     @Override
     public void save(String resultLocation) {
-        this.datasetSupplier.get().write().format("parquet").save(resultLocation);
-    }
-
-    private Dataset<Row> buildDataset() {
-        return spark.table(TABLE_NAME).sort("record");
+        sparkSessionSupplier
+                .get()
+                .table(TABLE_NAME)
+                .sort("record")
+                .write()
+                .format("parquet")
+                .save(resultLocation);
     }
 }

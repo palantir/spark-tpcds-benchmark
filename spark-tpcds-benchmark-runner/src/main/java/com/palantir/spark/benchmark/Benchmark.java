@@ -67,7 +67,7 @@ public final class Benchmark {
     private final BenchmarkPaths paths;
     private final TpcdsQueryCorrectnessChecks correctness;
     private final BenchmarkMetrics metrics;
-    private final Supplier<SparkSession> spark;
+    private final Supplier<SparkSession> sparkSessionSupplier;
     private final FileSystem dataFileSystem;
     private final Supplier<ImmutableList<Query>> sqlQuerySupplier;
     private final Map<QuerySessionIdentifier, Integer> attemptCounters = new ConcurrentHashMap<>();
@@ -80,7 +80,7 @@ public final class Benchmark {
             BenchmarkPaths paths,
             TpcdsQueryCorrectnessChecks correctness,
             BenchmarkMetrics metrics,
-            Supplier<SparkSession> spark,
+            Supplier<SparkSession> sparkSessionSupplier,
             FileSystem dataFileSystem) {
         this.config = config;
         this.dataGenerator = dataGenerator;
@@ -89,9 +89,9 @@ public final class Benchmark {
         this.correctness = correctness;
         this.metrics = metrics;
         this.paths = paths;
-        this.spark = spark;
+        this.sparkSessionSupplier = sparkSessionSupplier;
         this.dataFileSystem = dataFileSystem;
-        this.sqlQuerySupplier = Suppliers.memoize(() -> buildSqlQueries(spark.get()));
+        this.sqlQuerySupplier = Suppliers.memoize(() -> buildSqlQueries(sparkSessionSupplier));
     }
 
     public void run() throws IOException {
@@ -122,7 +122,8 @@ public final class Benchmark {
         log.info("Successfully ran all benchmarks for the requested number of iterations");
 
         metrics.flushMetrics();
-        Dataset<Row> resultMetrics = spark.get().read().json(paths.metricsDir()).drop("sparkConf");
+        Dataset<Row> resultMetrics =
+                sparkSessionSupplier.get().read().json(paths.metricsDir()).drop("sparkConf");
         log.info(
                 "Printing summary metrics (limit 1000):\n{}",
                 SafeArg.of(
@@ -170,7 +171,8 @@ public final class Benchmark {
                         String.format("Failed to clear experiment result destination directory at %s.", resultPath));
             }
 
-            spark.get()
+            sparkSessionSupplier
+                    .get()
                     .sparkContext()
                     .setJobDescription(String.format("%s-benchmark-attempt-%d", query.getName(), attempt));
             metrics.startBenchmark(query.getName(), scale);
@@ -229,7 +231,7 @@ public final class Benchmark {
     private List<Query> getQueries() {
         ImmutableList.Builder<Query> queries = ImmutableList.builder();
         if (config.benchmarks().gensort().enabled()) {
-            queries.add(new SortBenchmarkQuery(spark.get()));
+            queries.add(new SortBenchmarkQuery(sparkSessionSupplier));
         }
         if (config.benchmarks().tpcds().enabled()) {
             queries.addAll(sqlQuerySupplier.get());
@@ -237,7 +239,7 @@ public final class Benchmark {
         return queries.build();
     }
 
-    private static ImmutableList<Query> buildSqlQueries(SparkSession spark) {
+    private static ImmutableList<Query> buildSqlQueries(Supplier<SparkSession> spark) {
         ImmutableList.Builder<Query> queries = ImmutableList.builder();
         try (TarArchiveInputStream tarArchiveInputStream = new TarArchiveInputStream(
                         Benchmark.class.getClassLoader().getResourceAsStream("queries.tar"));

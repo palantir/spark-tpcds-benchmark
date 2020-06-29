@@ -16,7 +16,6 @@
 
 package com.palantir.spark.benchmark.queries;
 
-import com.google.common.base.Suppliers;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.apache.spark.sql.Dataset;
@@ -27,12 +26,12 @@ import org.apache.spark.sql.types.StructType;
 public final class SqlQuery implements Query {
     private final String queryName;
     private final String sqlStatement;
-    private final Supplier<Dataset<Row>> datasetSupplier;
+    private final Supplier<SparkSession> sparkSessionSupplier;
 
-    public SqlQuery(SparkSession spark, String queryName, String sqlStatement) {
+    public SqlQuery(Supplier<SparkSession> sparkSessionSupplier, String queryName, String sqlStatement) {
         this.queryName = queryName;
         this.sqlStatement = sqlStatement;
-        this.datasetSupplier = Suppliers.memoize(() -> sanitizeColumnNames(spark.sql(this.sqlStatement)));
+        this.sparkSessionSupplier = sparkSessionSupplier;
     }
 
     @Override
@@ -47,12 +46,16 @@ public final class SqlQuery implements Query {
 
     @Override
     public StructType getSchema() {
-        return datasetSupplier.get().schema();
+        return sanitizeColumnNames(sparkSessionSupplier.get().sql(this.sqlStatement))
+                .schema();
     }
 
     @Override
     public void save(String resultLocation) {
-        datasetSupplier.get().write().format("parquet").save(resultLocation);
+        sanitizeColumnNames(sparkSessionSupplier.get().sql(this.sqlStatement))
+                .write()
+                .format("parquet")
+                .save(resultLocation);
     }
 
     private Dataset<Row> sanitizeColumnNames(Dataset<Row> sqlOutput) {
