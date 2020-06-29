@@ -79,7 +79,7 @@ public final class GenSortTest extends AbstractLocalSparkTest {
                 "parquet");
         assertThat(copiedParquet).hasSameElementsAs(generatedLines);
 
-        SortBenchmarkQuery query = new SortBenchmarkQuery(sparkSession);
+        SortBenchmarkQuery query = new SortBenchmarkQuery(() -> sparkSession);
         // Should not throw. We can't assert sortedness since the data could be saved in multiple partitions.
         query.save(paths.experimentResultLocation(QuerySessionIdentifier.of("gensort", scale), 0));
     }

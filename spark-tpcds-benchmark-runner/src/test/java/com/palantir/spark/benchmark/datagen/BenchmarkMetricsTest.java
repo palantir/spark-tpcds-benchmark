@@ -30,7 +30,7 @@ public final class BenchmarkMetricsTest extends AbstractLocalSparkTest {
                 SparkConfiguration.builder().build(),
                 "test-experiment",
                 new BenchmarkPaths("test-experiment"),
-                sparkSession);
+                () -> sparkSession);
         metrics.startBenchmark("q1", 10);
         metrics.stopBenchmark("q1", 10);
         metrics.markVerificationFailed("q1", 10);
