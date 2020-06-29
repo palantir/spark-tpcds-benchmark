@@ -172,18 +172,8 @@ public final class Benchmark {
 
             spark.sparkContext().setJobDescription(String.format("%s-benchmark-attempt-%d", query.getName(), attempt));
             metrics.startBenchmark(identifier);
-            boolean success = false;
-            try {
-                query.save(resultLocation);
-                success = true;
-            } finally {
-                if (success) {
-                    metrics.stopBenchmark(identifier);
-                } else {
-                    metrics.abortBenchmark(identifier);
-                }
-            }
-
+            query.save(resultLocation);
+            metrics.stopBenchmark(identifier);
             log.info(
                     "Successfully ran query {} at scale {}.",
                     SafeArg.of("queryName", query.getName()),
@@ -191,6 +181,7 @@ public final class Benchmark {
             verifyCorrectness(query, identifier, resultLocation);
             return true;
         } catch (Exception e) {
+            metrics.abortBenchmark(identifier);
             log.error(
                     "Caught an exception while running query {} at scale {}; may re-attempt.",
                     SafeArg.of("queryName", query.getName()),
