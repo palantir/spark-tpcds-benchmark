@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -46,17 +47,19 @@ public final class TpcdsQueryCorrectnessChecks {
 
     private final BenchmarkPaths paths;
     private final FileSystem dataFileSystem;
-    private final SparkSession spark;
+    private final Supplier<SparkSession> sparkSessionSupplier;
 
-    public TpcdsQueryCorrectnessChecks(BenchmarkPaths paths, FileSystem dataFileSystem, SparkSession spark) {
+    public TpcdsQueryCorrectnessChecks(
+            BenchmarkPaths paths, FileSystem dataFileSystem, Supplier<SparkSession> sparkSessionSupplier) {
         this.paths = paths;
         this.dataFileSystem = dataFileSystem;
-        this.spark = spark;
+        this.sparkSessionSupplier = sparkSessionSupplier;
     }
 
     public void verifyCorrectness(
             int scale, String queryName, String sqlStatement, StructType resultSchema, String resultsPath)
             throws IOException {
+        SparkSession spark = sparkSessionSupplier.get();
         spark.sparkContext().setJobDescription(String.format("%s-table-hash-correctness", queryName));
         Dataset<Row> writtenResult =
                 spark.read().format("parquet").schema(resultSchema).load(resultsPath);

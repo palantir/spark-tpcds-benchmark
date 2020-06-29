@@ -67,7 +67,7 @@ public final class Benchmark {
     private final BenchmarkPaths paths;
     private final TpcdsQueryCorrectnessChecks correctness;
     private final BenchmarkMetrics metrics;
-    private final SparkSession spark;
+    private final Supplier<SparkSession> spark;
     private final FileSystem dataFileSystem;
     private final Supplier<ImmutableList<Query>> sqlQuerySupplier;
     private final Map<QuerySessionIdentifier, Integer> attemptCounters = new ConcurrentHashMap<>();
@@ -80,7 +80,7 @@ public final class Benchmark {
             BenchmarkPaths paths,
             TpcdsQueryCorrectnessChecks correctness,
             BenchmarkMetrics metrics,
-            SparkSession spark,
+            Supplier<SparkSession> spark,
             FileSystem dataFileSystem) {
         this.config = config;
         this.dataGenerator = dataGenerator;
@@ -91,7 +91,7 @@ public final class Benchmark {
         this.paths = paths;
         this.spark = spark;
         this.dataFileSystem = dataFileSystem;
-        this.sqlQuerySupplier = Suppliers.memoize(() -> buildSqlQueries(spark));
+        this.sqlQuerySupplier = Suppliers.memoize(() -> buildSqlQueries(spark.get()));
     }
 
     public void run() throws IOException {
@@ -122,7 +122,7 @@ public final class Benchmark {
         log.info("Successfully ran all benchmarks for the requested number of iterations");
 
         metrics.flushMetrics();
-        Dataset<Row> resultMetrics = spark.read().json(paths.metricsDir()).drop("sparkConf");
+        Dataset<Row> resultMetrics = spark.get().read().json(paths.metricsDir()).drop("sparkConf");
         log.info(
                 "Printing summary metrics (limit 1000):\n{}",
                 SafeArg.of(
@@ -170,7 +170,9 @@ public final class Benchmark {
                         String.format("Failed to clear experiment result destination directory at %s.", resultPath));
             }
 
-            spark.sparkContext().setJobDescription(String.format("%s-benchmark-attempt-%d", query.getName(), attempt));
+            spark.get()
+                    .sparkContext()
+                    .setJobDescription(String.format("%s-benchmark-attempt-%d", query.getName(), attempt));
             metrics.startBenchmark(query.getName(), scale);
             boolean success = false;
             try {
@@ -227,7 +229,7 @@ public final class Benchmark {
     private List<Query> getQueries() {
         ImmutableList.Builder<Query> queries = ImmutableList.builder();
         if (config.benchmarks().gensort().enabled()) {
-            queries.add(new SortBenchmarkQuery(spark));
+            queries.add(new SortBenchmarkQuery(spark.get()));
         }
         if (config.benchmarks().tpcds().enabled()) {
             queries.addAll(sqlQuerySupplier.get());

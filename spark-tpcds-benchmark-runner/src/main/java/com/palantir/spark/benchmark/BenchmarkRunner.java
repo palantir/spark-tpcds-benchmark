@@ -33,6 +33,7 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.SparkConf;
@@ -72,12 +73,13 @@ public final class BenchmarkRunner {
                 sparkConf.set("spark.executor.memory", config.spark().executorMemory());
             }
 
-            SparkSession spark = SparkSession.builder().config(sparkConf).getOrCreate();
+            Supplier<SparkSession> spark =
+                    () -> SparkSession.builder().config(sparkConf).getOrCreate();
             String experimentName = config.benchmarks().experimentName().orElseGet(() -> Instant.now()
                     .toString());
             BenchmarkPaths paths = new BenchmarkPaths(experimentName);
             Schemas schemas = new Schemas();
-            TableRegistration registration = new TableRegistration(paths, dataFileSystem, spark, schemas);
+            TableRegistration registration = new TableRegistration(paths, dataFileSystem, spark.get(), schemas);
             ExecutorService dataGeneratorThreadPool = Executors.newFixedThreadPool(
                     config.dataGeneration().parallelism(),
                     new ThreadFactoryBuilder()
@@ -91,12 +93,12 @@ public final class BenchmarkRunner {
                     config.dataGeneration().overwriteData(),
                     dataFileSystem,
                     parquetTransformer,
-                    spark,
+                    spark.get(),
                     paths,
                     schemas,
                     dataGeneratorThreadPool);
             SortDataGenerator sortDataGenerator = new GenSortDataGenerator(
-                    spark,
+                    spark.get(),
                     dataFileSystem,
                     parquetTransformer,
                     paths,

@@ -34,6 +34,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -57,16 +58,19 @@ public final class BenchmarkMetrics {
     private final SparkConfiguration config;
     private final String resolvedExperimentName;
     private final BenchmarkPaths paths;
-    private final SparkSession spark;
+    private final Supplier<SparkSession> sparkSessionSupplier;
     private final Map<QuerySessionIdentifier, BenchmarkMetric> metricsBuffer;
     private Optional<RunningQuery> currentRunningQuery = Optional.empty();
 
     public BenchmarkMetrics(
-            SparkConfiguration config, String resolvedExperimentName, BenchmarkPaths paths, SparkSession spark) {
+            SparkConfiguration config,
+            String resolvedExperimentName,
+            BenchmarkPaths paths,
+            Supplier<SparkSession> sparkSessionSupplier) {
         this.config = config;
         this.resolvedExperimentName = resolvedExperimentName;
         this.paths = paths;
-        this.spark = spark;
+        this.sparkSessionSupplier = spark;
         this.metricsBuffer = MAP_DB.hashMap(
                         resolvedExperimentName,
                         JacksonSerializer.create(QuerySessionIdentifier.class),
@@ -111,6 +115,7 @@ public final class BenchmarkMetrics {
         long elapsed = runningQuery.timer().elapsed(TimeUnit.MILLISECONDS);
         Instant startTime = endTime.minus(Duration.ofMillis(elapsed));
 
+        SparkSession spark = sparkSessionSupplier.get();
         writeToBuffer(
                 runningQuery.toIdentifier(),
                 BenchmarkMetric.builder()
@@ -168,6 +173,7 @@ public final class BenchmarkMetrics {
     }
 
     public Dataset<Row> getMetricsDataset() {
+        SparkSession spark = sparkSessionSupplier.get();
         return spark.createDataFrame(
                 metricsBuffer.values().stream().map(BenchmarkMetric::toRow).collect(Collectors.toList()),
                 BenchmarkMetric.schema());
