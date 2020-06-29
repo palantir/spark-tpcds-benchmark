@@ -70,7 +70,7 @@ public final class BenchmarkMetrics {
         this.config = config;
         this.resolvedExperimentName = resolvedExperimentName;
         this.paths = paths;
-        this.sparkSessionSupplier = spark;
+        this.sparkSessionSupplier = sparkSessionSupplier;
         this.metricsBuffer = MAP_DB.hashMap(
                         resolvedExperimentName,
                         JacksonSerializer.create(QuerySessionIdentifier.class),
