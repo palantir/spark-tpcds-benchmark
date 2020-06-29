@@ -38,9 +38,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** The main entry point for the application. */
 public final class BenchmarkRunner {
+    private static final Logger log = LoggerFactory.getLogger(BenchmarkRunner.class);
 
     private static final Path DEFAULT_CONFIG_FILE = Paths.get("var", "conf", "config.yml");
 
@@ -73,13 +76,10 @@ public final class BenchmarkRunner {
                 sparkConf.set("spark.executor.memory", config.spark().executorMemory());
             }
 
-            Supplier<SparkSession> spark =
-                    () -> SparkSession.builder().config(sparkConf).getOrCreate();
             String experimentName = config.benchmarks().experimentName().orElseGet(() -> Instant.now()
                     .toString());
             BenchmarkPaths paths = new BenchmarkPaths(experimentName);
             Schemas schemas = new Schemas();
-            TableRegistration registration = new TableRegistration(paths, dataFileSystem, spark.get(), schemas);
             ExecutorService dataGeneratorThreadPool = Executors.newFixedThreadPool(
                     config.dataGeneration().parallelism(),
                     new ThreadFactoryBuilder()
@@ -87,6 +87,21 @@ public final class BenchmarkRunner {
                             .setNameFormat("data-generator-%d")
                             .build());
             DefaultParquetTransformer parquetTransformer = new DefaultParquetTransformer();
+
+            Supplier<SparkSession> spark = () -> {
+                SparkSession sparkSession =
+                        SparkSession.builder().config(sparkConf).getOrCreate();
+                TableRegistration registration = new TableRegistration(paths, dataFileSystem, sparkSession, schemas);
+                try {
+                    config.dataScalesGb().forEach(scale -> {
+                        registration.registerGensortTable(scale);
+                        registration.registerTpcdsTables(scale);
+                    });
+                } catch (Exception e) {
+                    log.warn("Table registration failed, will try to continue anyway.", e);
+                }
+                return sparkSession;
+            };
             TpcdsDataGenerator dataGenerator = new TpcdsDataGenerator(
                     Paths.get(config.dataGeneration().tempWorkingDir()),
                     config.dataScalesGb(),
@@ -109,16 +124,7 @@ public final class BenchmarkRunner {
                     dataGeneratorThreadPool);
             TpcdsQueryCorrectnessChecks correctness = new TpcdsQueryCorrectnessChecks(paths, dataFileSystem, spark);
             BenchmarkMetrics metrics = new BenchmarkMetrics(config.spark(), experimentName, paths, spark);
-            new Benchmark(
-                            config,
-                            dataGenerator,
-                            sortDataGenerator,
-                            registration,
-                            paths,
-                            correctness,
-                            metrics,
-                            spark,
-                            dataFileSystem)
+            new Benchmark(config, dataGenerator, sortDataGenerator, paths, correctness, metrics, spark, dataFileSystem)
                     .run();
         }
     }

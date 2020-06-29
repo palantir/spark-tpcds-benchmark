@@ -34,7 +34,6 @@ import com.palantir.spark.benchmark.queries.Query;
 import com.palantir.spark.benchmark.queries.QuerySessionIdentifier;
 import com.palantir.spark.benchmark.queries.SortBenchmarkQuery;
 import com.palantir.spark.benchmark.queries.SqlQuery;
-import com.palantir.spark.benchmark.registration.TableRegistration;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -63,7 +62,6 @@ public final class Benchmark {
     private final BenchmarkRunnerConfig config;
     private final TpcdsDataGenerator dataGenerator;
     private final SortDataGenerator sortDataGenerator;
-    private final TableRegistration registration;
     private final BenchmarkPaths paths;
     private final TpcdsQueryCorrectnessChecks correctness;
     private final BenchmarkMetrics metrics;
@@ -76,7 +74,6 @@ public final class Benchmark {
             BenchmarkRunnerConfig config,
             TpcdsDataGenerator dataGenerator,
             SortDataGenerator sortDataGenerator,
-            TableRegistration registration,
             BenchmarkPaths paths,
             TpcdsQueryCorrectnessChecks correctness,
             BenchmarkMetrics metrics,
@@ -85,7 +82,6 @@ public final class Benchmark {
         this.config = config;
         this.dataGenerator = dataGenerator;
         this.sortDataGenerator = sortDataGenerator;
-        this.registration = registration;
         this.correctness = correctness;
         this.metrics = metrics;
         this.paths = paths;
@@ -108,8 +104,6 @@ public final class Benchmark {
                     SafeArg.of("totalNumIterations", config.benchmarks().iterations()));
             config.dataScalesGb().forEach(scale -> {
                 log.info("Beginning benchmarks at a new data scale of {}.", SafeArg.of("dataScale", scale));
-                registration.registerTpcdsTables(scale);
-                registration.registerGensortTable(scale);
                 getQueries()
                         .forEach(query -> runQueryWithRetries(
                                 query, scale, config.benchmarks().attemptsPerQuery()));
