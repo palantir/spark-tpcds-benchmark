@@ -154,7 +154,7 @@ public final class Benchmark {
     }
 
     private boolean attemptQuery(Query query, Integer scale) {
-        QuerySessionIdentifier identifier = QuerySessionIdentifier.of(query.getName(), scale);
+        QuerySessionIdentifier identifier = QuerySessionIdentifier.create(query.getName(), scale);
         int attempt =
                 attemptCounters.compute(identifier, (_key, oldAttempts) -> oldAttempts == null ? 0 : oldAttempts + 1);
         log.info(
@@ -171,26 +171,17 @@ public final class Benchmark {
             }
 
             spark.sparkContext().setJobDescription(String.format("%s-benchmark-attempt-%d", query.getName(), attempt));
-            metrics.startBenchmark(query.getName(), scale);
-            boolean success = false;
-            try {
-                query.save(resultLocation);
-                success = true;
-            } finally {
-                if (success) {
-                    metrics.stopBenchmark(query.getName(), scale);
-                } else {
-                    metrics.abortBenchmark(query.getName(), scale);
-                }
-            }
-
+            metrics.startBenchmark(identifier);
+            query.save(resultLocation);
+            metrics.stopBenchmark(identifier);
             log.info(
                     "Successfully ran query {} at scale {}.",
                     SafeArg.of("queryName", query.getName()),
                     SafeArg.of("scale", scale));
-            verifyCorrectness(query, scale, resultLocation);
+            verifyCorrectness(query, identifier, resultLocation);
             return true;
         } catch (Exception e) {
+            metrics.abortBenchmark(identifier);
             log.error(
                     "Caught an exception while running query {} at scale {}; may re-attempt.",
                     SafeArg.of("queryName", query.getName()),
@@ -200,26 +191,30 @@ public final class Benchmark {
         }
     }
 
-    private void verifyCorrectness(Query query, Integer scale, String resultLocation) {
+    private void verifyCorrectness(Query query, QuerySessionIdentifier identifier, String resultLocation) {
         if (query.getSqlStatement().isPresent()) {
             log.info(
                     "Verifying correctness of query {} at scale {}.",
                     SafeArg.of("queryName", query.getName()),
-                    SafeArg.of("scale", scale));
+                    SafeArg.of("scale", identifier.scale()));
             try {
                 correctness.verifyCorrectness(
-                        scale, query.getName(), query.getSqlStatement().get(), query.getSchema(), resultLocation);
+                        identifier.scale(),
+                        query.getName(),
+                        query.getSqlStatement().get(),
+                        query.getSchema(),
+                        resultLocation);
                 log.info(
                         "Successfully verified correctness of query {} at scale {}.",
                         SafeArg.of("queryName", query.getName()),
-                        SafeArg.of("scale", scale));
+                        SafeArg.of("scale", identifier.scale()));
             } catch (IOException | RuntimeException e) {
                 log.info(
                         "Failed to verify correctness of query {} at scale {}.",
                         SafeArg.of("queryName", query.getName()),
-                        SafeArg.of("scale", scale),
+                        SafeArg.of("scale", identifier.scale()),
                         e);
-                metrics.markVerificationFailed(query.getName(), scale);
+                metrics.markVerificationFailed(identifier);
             }
         }
     }

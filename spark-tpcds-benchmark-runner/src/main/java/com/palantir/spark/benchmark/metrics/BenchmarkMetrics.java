@@ -88,35 +88,33 @@ public final class BenchmarkMetrics {
                 .make();
     }
 
-    public void startBenchmark(String queryName, int scale) {
+    public void startBenchmark(QuerySessionIdentifier identifier) {
         Preconditions.checkArgument(currentRunningQuery.isEmpty(), "Can only run one query at a time.");
         currentRunningQuery = Optional.of(RunningQuery.builder()
-                .queryName(queryName)
-                .scale(scale)
                 .timer(Stopwatch.createStarted())
+                .identifier(identifier)
                 .build());
     }
 
-    public void stopBenchmark(String queryName, int scale) {
+    public void stopBenchmark(QuerySessionIdentifier identifier) {
         Preconditions.checkArgument(currentRunningQuery.isPresent(), "No benchmark is currently running.");
         RunningQuery runningQuery = currentRunningQuery.get();
-        Preconditions.checkArgument(
-                runningQuery.queryName().equals(queryName) && runningQuery.scale() == scale,
-                "Query names and scales must match",
-                SafeArg.of("currentRunningQuery", runningQuery),
-                SafeArg.of("queryName", queryName),
-                SafeArg.of("scale", scale));
+        Preconditions.checkState(
+                runningQuery.identifier().equals(identifier),
+                "Query identifiers must match",
+                SafeArg.of("currentlyRunningIdentifier", runningQuery.identifier()),
+                SafeArg.of("identifier", identifier));
 
         Instant endTime = Instant.now();
         long elapsed = runningQuery.timer().elapsed(TimeUnit.MILLISECONDS);
         Instant startTime = endTime.minus(Duration.ofMillis(elapsed));
 
         writeToBuffer(
-                runningQuery.toIdentifier(),
+                runningQuery.identifier(),
                 BenchmarkMetric.builder()
                         .experimentName(resolvedExperimentName)
-                        .queryName(runningQuery.queryName())
-                        .scale(runningQuery.scale())
+                        .queryName(runningQuery.identifier().queryName())
+                        .scale(runningQuery.identifier().scale())
                         .sparkVersion(spark.version())
                         .executorInstances(config.executorInstances())
                         .executorCores(config.executorCores())
@@ -132,21 +130,19 @@ public final class BenchmarkMetrics {
         currentRunningQuery = Optional.empty();
     }
 
-    public void abortBenchmark(String queryName, int scale) {
+    public void abortBenchmark(QuerySessionIdentifier identifier) {
         currentRunningQuery.ifPresent(query -> {
             Preconditions.checkState(
-                    query.queryName().equals(queryName) && query.scale() == scale,
-                    "Query names and scales must match",
-                    SafeArg.of("currentRunningQuery", query),
-                    SafeArg.of("queryName", queryName),
-                    SafeArg.of("scale", scale));
+                    query.identifier().equals(identifier),
+                    "Query identifiers must match",
+                    SafeArg.of("currentlyRunningIdentifier", query.identifier()),
+                    SafeArg.of("identifier", identifier));
             query.timer().stop();
         });
         currentRunningQuery = Optional.empty();
     }
 
-    public void markVerificationFailed(String queryName, int scale) {
-        QuerySessionIdentifier identifier = QuerySessionIdentifier.of(queryName, scale);
+    public void markVerificationFailed(QuerySessionIdentifier identifier) {
         BenchmarkMetric metric = Optional.ofNullable(metricsBuffer.get(identifier))
                 .orElseThrow(() -> new SafeIllegalArgumentException(
                         "Cannot mark verification failure for non-existent result!",
@@ -176,9 +172,7 @@ public final class BenchmarkMetrics {
     @Value.Immutable
     @ImmutablesStyle
     interface RunningQuery {
-        String queryName();
-
-        int scale();
+        QuerySessionIdentifier identifier();
 
         @Value.Auxiliary
         Stopwatch timer();
@@ -187,14 +181,6 @@ public final class BenchmarkMetrics {
 
         static Builder builder() {
             return new Builder();
-        }
-
-        @Value.Lazy
-        default QuerySessionIdentifier toIdentifier() {
-            return QuerySessionIdentifier.builder()
-                    .queryName(queryName())
-                    .scale(scale())
-                    .build();
         }
     }
 

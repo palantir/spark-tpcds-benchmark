@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.palantir.spark.benchmark.config.SparkConfiguration;
 import com.palantir.spark.benchmark.metrics.BenchmarkMetrics;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
+import com.palantir.spark.benchmark.queries.QuerySessionIdentifier;
 import org.junit.jupiter.api.Test;
 
 public final class BenchmarkMetricsTest extends AbstractLocalSparkTest {
@@ -31,11 +32,14 @@ public final class BenchmarkMetricsTest extends AbstractLocalSparkTest {
                 "test-experiment",
                 new BenchmarkPaths("test-experiment"),
                 sparkSession);
-        metrics.startBenchmark("q1", 10);
-        metrics.stopBenchmark("q1", 10);
-        metrics.markVerificationFailed("q1", 10);
-        metrics.startBenchmark("q2", 10);
-        metrics.stopBenchmark("q2", 10);
+        QuerySessionIdentifier identifier1 = QuerySessionIdentifier.create("q1", 10);
+        metrics.startBenchmark(identifier1);
+        metrics.stopBenchmark(identifier1);
+        metrics.markVerificationFailed(identifier1);
+
+        QuerySessionIdentifier identifier2 = QuerySessionIdentifier.create("q2", 10);
+        metrics.startBenchmark(identifier2);
+        metrics.stopBenchmark(identifier2);
         assertThat(metrics.getMetricsDataset().collectAsList()).hasSize(2);
         assertThat(metrics.getMetricsDataset().selectExpr("failedVerification").collectAsList().stream()
                         .map(row -> row.getBoolean(0)))
