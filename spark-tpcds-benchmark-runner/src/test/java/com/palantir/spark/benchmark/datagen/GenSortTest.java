@@ -81,7 +81,7 @@ public final class GenSortTest extends AbstractLocalSparkTest {
 
         SortBenchmarkQuery query = new SortBenchmarkQuery(sparkSession);
         // Should not throw. We can't assert sortedness since the data could be saved in multiple partitions.
-        query.save(paths.experimentResultLocation(QuerySessionIdentifier.create("gensort", scale), 0));
+        query.save(paths.experimentResultLocation(QuerySessionIdentifier.createUnique("gensort", scale), 0));
     }
 
     private List<String> read(Path path, String format) {

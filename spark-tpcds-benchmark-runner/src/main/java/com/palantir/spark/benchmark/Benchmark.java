@@ -106,6 +106,7 @@ public final class Benchmark {
                     "Beginning benchmark iteration {} of {}.",
                     SafeArg.of("currentIteration", iteration),
                     SafeArg.of("totalNumIterations", config.benchmarks().iterations()));
+            attemptCounters.clear();
             config.dataScalesGb().forEach(scale -> {
                 log.info("Beginning benchmarks at a new data scale of {}.", SafeArg.of("dataScale", scale));
                 registration.registerTpcdsTables(scale);
@@ -154,7 +155,7 @@ public final class Benchmark {
     }
 
     private boolean attemptQuery(Query query, Integer scale) {
-        QuerySessionIdentifier identifier = QuerySessionIdentifier.create(query.getName(), scale);
+        QuerySessionIdentifier identifier = QuerySessionIdentifier.createDefault(query.getName(), scale);
         int attempt =
                 attemptCounters.compute(identifier, (_key, oldAttempts) -> oldAttempts == null ? 0 : oldAttempts + 1);
         log.info(

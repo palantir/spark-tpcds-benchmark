@@ -27,14 +27,18 @@ import org.immutables.value.Value;
 @JsonSerialize(as = ImmutableQuerySessionIdentifier.class)
 @JsonDeserialize(as = ImmutableQuerySessionIdentifier.class)
 public interface QuerySessionIdentifier {
+    String SESSION_ID = UUID.randomUUID().toString();
+
     @Value.Parameter
     String queryName();
 
     @Value.Parameter
     int scale();
 
-    @Value.Parameter
-    String session();
+    @Value.Default
+    default String session() {
+        return SESSION_ID;
+    }
 
     final class Builder extends ImmutableQuerySessionIdentifier.Builder {}
 
@@ -42,7 +46,15 @@ public interface QuerySessionIdentifier {
         return new Builder();
     }
 
-    static QuerySessionIdentifier create(String queryName, int scale) {
+    static QuerySessionIdentifier createDefault(String queryName, int scale) {
+        return builder()
+                .queryName(queryName)
+                .scale(scale)
+                .session(UUID.randomUUID().toString())
+                .build();
+    }
+
+    static QuerySessionIdentifier createUnique(String queryName, int scale) {
         return builder()
                 .queryName(queryName)
                 .scale(scale)

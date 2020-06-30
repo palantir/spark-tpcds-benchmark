@@ -37,12 +37,12 @@ public final class BenchmarkMetricsTest extends AbstractLocalSparkTest {
         BenchmarkPaths paths = new BenchmarkPaths(experimentName);
         BenchmarkMetrics metrics =
                 new BenchmarkMetrics(SparkConfiguration.builder().build(), experimentName, paths, sparkSession);
-        QuerySessionIdentifier identifier1 = QuerySessionIdentifier.create("q1", 10);
+        QuerySessionIdentifier identifier1 = QuerySessionIdentifier.createDefault("q1", 10);
         metrics.startBenchmark(identifier1);
         metrics.stopBenchmark(identifier1);
         metrics.markVerificationFailed(identifier1);
 
-        QuerySessionIdentifier identifier2 = QuerySessionIdentifier.create("q2", 10);
+        QuerySessionIdentifier identifier2 = QuerySessionIdentifier.createDefault("q2", 10);
         metrics.startBenchmark(identifier2);
         metrics.stopBenchmark(identifier2);
 
