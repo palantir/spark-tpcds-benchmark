@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.ImmutableList;
 import com.palantir.spark.benchmark.immutables.ImmutablesStyle;
+import com.palantir.spark.benchmark.queries.QuerySessionIdentifier;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Optional;
@@ -105,7 +106,7 @@ public abstract class BenchmarkMetric implements Serializable {
                         new java.sql.Timestamp(experimentStartTimestampMillis()),
                         new java.sql.Timestamp(experimentEndTimestampMillis()),
                         failedVerification().orElse(false),
-                        sessionId().orElse("NO_SESSION")))
+                        sessionId().orElse(QuerySessionIdentifier.NO_SESSION)))
                 .asScala());
     }
 

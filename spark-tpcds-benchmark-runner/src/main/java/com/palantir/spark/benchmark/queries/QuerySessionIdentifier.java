@@ -27,6 +27,7 @@ import org.immutables.value.Value;
 @JsonSerialize(as = ImmutableQuerySessionIdentifier.class)
 @JsonDeserialize(as = ImmutableQuerySessionIdentifier.class)
 public interface QuerySessionIdentifier {
+    String NO_SESSION = "NO_SESSION";
     String SESSION_ID = UUID.randomUUID().toString();
 
     @Value.Parameter
