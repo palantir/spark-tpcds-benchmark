@@ -48,11 +48,7 @@ public interface QuerySessionIdentifier {
     }
 
     static QuerySessionIdentifier createDefault(String queryName, int scale) {
-        return builder()
-                .queryName(queryName)
-                .scale(scale)
-                .session(UUID.randomUUID().toString())
-                .build();
+        return builder().queryName(queryName).scale(scale).build();
     }
 
     static QuerySessionIdentifier createUnique(String queryName, int scale) {
