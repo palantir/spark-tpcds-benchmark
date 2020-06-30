@@ -1,0 +1,6 @@
+type: improvement
+improvement:
+  description: increase YARN max executor failures in default config, so benchmarks
+    with many iterations are less likely to fail
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/242

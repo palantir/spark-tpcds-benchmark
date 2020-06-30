@@ -28,6 +28,7 @@ spark:
   sparkConf:
     spark.yarn.jars: service/lib/*
     spark.sql.adaptive.enabled: true
+    spark.yarn.max.executor.failures: 1000
 
 dataScalesGb:
   - 1
