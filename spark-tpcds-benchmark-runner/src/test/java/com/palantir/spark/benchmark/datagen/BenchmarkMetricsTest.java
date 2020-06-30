@@ -18,6 +18,8 @@ package com.palantir.spark.benchmark.datagen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.palantir.spark.benchmark.AbstractLocalSparkTest;
+import com.palantir.spark.benchmark.TestIdentifiers;
 import com.palantir.spark.benchmark.config.SparkConfiguration;
 import com.palantir.spark.benchmark.metrics.BenchmarkMetric;
 import com.palantir.spark.benchmark.metrics.BenchmarkMetrics;
@@ -37,14 +39,14 @@ public final class BenchmarkMetricsTest extends AbstractLocalSparkTest {
         BenchmarkPaths paths = new BenchmarkPaths(experimentName);
         BenchmarkMetrics metrics =
                 new BenchmarkMetrics(SparkConfiguration.builder().build(), experimentName, paths, sparkSession);
-        QuerySessionIdentifier identifier1 = QuerySessionIdentifier.createDefault("q1", 10);
-        metrics.startBenchmark(identifier1);
-        metrics.stopBenchmark(identifier1);
+        QuerySessionIdentifier identifier1 = TestIdentifiers.create("q1", 10);
+        metrics.startBenchmark(identifier1, 0);
+        metrics.stopBenchmark(identifier1, 0);
         metrics.markVerificationFailed(identifier1);
 
-        QuerySessionIdentifier identifier2 = QuerySessionIdentifier.createDefault("q2", 10);
-        metrics.startBenchmark(identifier2);
-        metrics.stopBenchmark(identifier2);
+        QuerySessionIdentifier identifier2 = TestIdentifiers.create("q2", 10);
+        metrics.startBenchmark(identifier2, 0);
+        metrics.stopBenchmark(identifier2, 0);
 
         // drop sparkConf for legibility on test failures
         List<Row> metricsRows = metrics.getMetricsDataset().drop("sparkConf").collectAsList();

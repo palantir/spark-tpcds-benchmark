@@ -36,6 +36,9 @@ public interface QuerySessionIdentifier {
     @Value.Parameter
     int scale();
 
+    @Value.Parameter
+    int iteration();
+
     @Value.Default
     default String session() {
         return SESSION_ID;
@@ -47,15 +50,7 @@ public interface QuerySessionIdentifier {
         return new Builder();
     }
 
-    static QuerySessionIdentifier createDefault(String queryName, int scale) {
-        return builder().queryName(queryName).scale(scale).build();
-    }
-
-    static QuerySessionIdentifier createUnique(String queryName, int scale) {
-        return builder()
-                .queryName(queryName)
-                .scale(scale)
-                .session(UUID.randomUUID().toString())
-                .build();
+    static QuerySessionIdentifier createDefault(String queryName, int scale, int iteration) {
+        return builder().queryName(queryName).scale(scale).iteration(iteration).build();
     }
 }

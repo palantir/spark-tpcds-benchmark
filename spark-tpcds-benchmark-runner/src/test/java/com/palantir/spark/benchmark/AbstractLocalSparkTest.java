@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.palantir.spark.benchmark.datagen;
+package com.palantir.spark.benchmark;
 
 import com.palantir.spark.benchmark.config.HadoopConfiguration;
 import com.palantir.spark.benchmark.config.SimpleFilesystemConfiguration;
@@ -27,7 +27,7 @@ import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 
 public abstract class AbstractLocalSparkTest {
-    SparkSession sparkSession;
+    protected SparkSession sparkSession;
 
     @BeforeEach
     public void beforeEach() {
@@ -46,13 +46,13 @@ public abstract class AbstractLocalSparkTest {
                 .getOrCreate();
     }
 
-    final Path createTemporaryWorkingDir(String prefix) throws IOException {
+    protected final Path createTemporaryWorkingDir(String prefix) throws IOException {
         Path directory = Files.createDirectory(Paths.get("/tmp", prefix + "_" + UUID.randomUUID()));
         directory.toFile().deleteOnExit();
         return directory;
     }
 
-    final HadoopConfiguration getHadoopConfiguration(Path destinationDataDirectory) {
+    protected final HadoopConfiguration getHadoopConfiguration(Path destinationDataDirectory) {
         String fullyQualifiedDestinationDir =
                 "file://" + destinationDataDirectory.toFile().getAbsolutePath();
         return HadoopConfiguration.builder()
