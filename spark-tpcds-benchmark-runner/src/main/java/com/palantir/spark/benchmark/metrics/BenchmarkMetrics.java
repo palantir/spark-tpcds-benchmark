@@ -73,7 +73,9 @@ public final class BenchmarkMetrics {
                         JacksonSerializer.create(BenchmarkMetric.class))
                 .createOrOpen();
         if (!this.metricsBuffer.isEmpty()) {
-            log.warn("Found unflushed metrics in the buffer; attempting to flush");
+            log.warn(
+                    "Found unflushed {} metrics in the buffer; attempting to flush",
+                    SafeArg.of("numMetrics", metricsBuffer.size()));
             flushMetrics();
         }
     }
