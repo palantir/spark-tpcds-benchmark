@@ -65,6 +65,8 @@ public abstract class BenchmarkMetric implements Serializable {
 
     public abstract Optional<Boolean> failedVerification();
 
+    public abstract Optional<String> sessionId();
+
     public static StructType schema() {
         return new StructType(Stream.of(
                         new StructField("experimentName", DataTypes.StringType, false, Metadata.empty()),
@@ -83,7 +85,8 @@ public abstract class BenchmarkMetric implements Serializable {
                                 Metadata.empty()),
                         new StructField("experimentStartTimestamp", DataTypes.TimestampType, false, Metadata.empty()),
                         new StructField("experimentEndTimestamp", DataTypes.TimestampType, false, Metadata.empty()),
-                        new StructField("failedVerification", DataTypes.BooleanType, true, Metadata.empty()))
+                        new StructField("failedVerification", DataTypes.BooleanType, true, Metadata.empty()),
+                        new StructField("sessionId", DataTypes.StringType, true, Metadata.empty()))
                 .toArray(StructField[]::new));
     }
 
@@ -101,7 +104,8 @@ public abstract class BenchmarkMetric implements Serializable {
                         JavaConverters.mapAsScalaMapConverter(sparkConf()).asScala(),
                         new java.sql.Timestamp(experimentStartTimestampMillis()),
                         new java.sql.Timestamp(experimentEndTimestampMillis()),
-                        failedVerification().orElse(false)))
+                        failedVerification().orElse(false),
+                        sessionId().orElse("NO_SESSION")))
                 .asScala());
     }
 

@@ -126,6 +126,7 @@ public final class BenchmarkMetrics {
                         .experimentStartTimestampMillis(startTime.toEpochMilli())
                         .experimentEndTimestampMillis(endTime.toEpochMilli())
                         .durationMillis(elapsed)
+                        .sessionId(runningQuery.identifier().session())
                         .build());
         currentRunningQuery = Optional.empty();
     }
@@ -158,7 +159,12 @@ public final class BenchmarkMetrics {
     }
 
     public void flushMetrics() {
-        getMetricsDataset().write().mode(SaveMode.Append).format("json").save(paths.metricsDir());
+        getMetricsDataset()
+                .write()
+                .partitionBy("sessionId")
+                .mode(SaveMode.Append)
+                .format("json")
+                .save(paths.metricsDir());
         metricsBuffer.clear();
         MAP_DB.commit();
     }
