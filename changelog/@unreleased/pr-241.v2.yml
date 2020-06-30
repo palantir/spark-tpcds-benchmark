@@ -1,6 +1,7 @@
 type: improvement
 improvement:
   description: Results metrics will always be written to a unique path, since they
-    are hive partitioned by sessionId (a random UUID).
+    are hive partitioned by sessionId (a random UUID), as well as iteration & attempt
+    numbers.
   links:
   - https://github.com/palantir/spark-tpcds-benchmark/pull/241
