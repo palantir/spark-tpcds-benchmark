@@ -1,0 +1,5 @@
+type: fix
+fix:
+  description: Make iteration optional to fix backcompat of QuerySessionIdentifier
+  links:
+  - https://github.com/palantir/spark-tpcds-benchmark/pull/243

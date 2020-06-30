@@ -36,8 +36,10 @@ public interface QuerySessionIdentifier {
     @Value.Parameter
     int scale();
 
-    @Value.Parameter
-    int iteration();
+    @Value.Default
+    default int iteration() {
+        return -1;
+    }
 
     @Value.Default
     default String session() {
