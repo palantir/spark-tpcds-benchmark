@@ -21,6 +21,7 @@ import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.palantir.spark.benchmark.AbstractLocalSparkTest;
 import com.palantir.spark.benchmark.config.HadoopConfiguration;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.schemas.Schemas;

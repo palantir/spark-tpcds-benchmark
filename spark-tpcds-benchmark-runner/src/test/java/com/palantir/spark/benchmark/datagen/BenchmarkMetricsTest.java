@@ -18,31 +18,59 @@ package com.palantir.spark.benchmark.datagen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.palantir.spark.benchmark.AbstractLocalSparkTest;
+import com.palantir.spark.benchmark.TestIdentifiers;
 import com.palantir.spark.benchmark.config.SparkConfiguration;
+import com.palantir.spark.benchmark.metrics.BenchmarkMetric;
 import com.palantir.spark.benchmark.metrics.BenchmarkMetrics;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.queries.QuerySessionIdentifier;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.UUID;
+import org.apache.spark.sql.Row;
+import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
 
 public final class BenchmarkMetricsTest extends AbstractLocalSparkTest {
     @Test
     public void testMetrics() {
-        BenchmarkMetrics metrics = new BenchmarkMetrics(
-                SparkConfiguration.builder().build(),
-                "test-experiment",
-                new BenchmarkPaths("test-experiment"),
-                sparkSession);
-        QuerySessionIdentifier identifier1 = QuerySessionIdentifier.create("q1", 10);
-        metrics.startBenchmark(identifier1);
-        metrics.stopBenchmark(identifier1);
+        String experimentName = "test-experiment-" + UUID.randomUUID().toString();
+        BenchmarkPaths paths = new BenchmarkPaths(experimentName);
+        BenchmarkMetrics metrics =
+                new BenchmarkMetrics(SparkConfiguration.builder().build(), experimentName, paths, sparkSession);
+        QuerySessionIdentifier identifier1 = TestIdentifiers.create("q1", 10);
+        metrics.startBenchmark(identifier1, 0);
+        metrics.stopBenchmark(identifier1, 0);
         metrics.markVerificationFailed(identifier1);
 
-        QuerySessionIdentifier identifier2 = QuerySessionIdentifier.create("q2", 10);
-        metrics.startBenchmark(identifier2);
-        metrics.stopBenchmark(identifier2);
-        assertThat(metrics.getMetricsDataset().collectAsList()).hasSize(2);
+        QuerySessionIdentifier identifier2 = TestIdentifiers.create("q2", 10);
+        metrics.startBenchmark(identifier2, 0);
+        metrics.stopBenchmark(identifier2, 0);
+
+        // drop sparkConf for legibility on test failures
+        List<Row> metricsRows = metrics.getMetricsDataset().drop("sparkConf").collectAsList();
+        assertThat(metricsRows).hasSize(2);
         assertThat(metrics.getMetricsDataset().selectExpr("failedVerification").collectAsList().stream()
                         .map(row -> row.getBoolean(0)))
                 .containsExactlyInAnyOrder(true, false);
+        assertThat(metrics.getMetricsDataset().selectExpr("sessionId").collectAsList().stream()
+                        .map(row -> row.getString(0))
+                        .map(UUID::fromString)
+                        .distinct())
+                .hasSize(2);
+
+        metrics.flushMetrics();
+        assertThat(metrics.getMetricsDataset().collectAsList()).isEmpty();
+        assertThat(sparkSession
+                        .read()
+                        .schema(BenchmarkMetric.schema())
+                        .json(paths.metricsDir())
+                        .drop("sparkConf")
+                        .collectAsList())
+                .containsExactlyInAnyOrderElementsOf(metricsRows);
+
+        // clean up
+        Files.delete(Paths.get(paths.metricsDir()).toFile());
     }
 }

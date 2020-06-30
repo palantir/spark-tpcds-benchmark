@@ -88,22 +88,24 @@ public final class BenchmarkMetrics {
                 .make();
     }
 
-    public void startBenchmark(QuerySessionIdentifier identifier) {
+    public void startBenchmark(QuerySessionIdentifier identifier, int attempt) {
         Preconditions.checkArgument(currentRunningQuery.isEmpty(), "Can only run one query at a time.");
         currentRunningQuery = Optional.of(RunningQuery.builder()
                 .timer(Stopwatch.createStarted())
                 .identifier(identifier)
+                .attempt(attempt)
                 .build());
     }
 
-    public void stopBenchmark(QuerySessionIdentifier identifier) {
+    public void stopBenchmark(QuerySessionIdentifier identifier, int attempt) {
         Preconditions.checkArgument(currentRunningQuery.isPresent(), "No benchmark is currently running.");
         RunningQuery runningQuery = currentRunningQuery.get();
-        Preconditions.checkState(
-                runningQuery.identifier().equals(identifier),
+        Preconditions.checkArgument(
+                runningQuery.identifier().equals(identifier) && runningQuery.attempt() == attempt,
                 "Query identifiers must match",
-                SafeArg.of("currentlyRunningIdentifier", runningQuery.identifier()),
-                SafeArg.of("identifier", identifier));
+                SafeArg.of("runningQuery", runningQuery),
+                SafeArg.of("identifier", identifier),
+                SafeArg.of("attempt", attempt));
 
         Instant endTime = Instant.now();
         long elapsed = runningQuery.timer().elapsed(TimeUnit.MILLISECONDS);
@@ -126,18 +128,22 @@ public final class BenchmarkMetrics {
                         .experimentStartTimestampMillis(startTime.toEpochMilli())
                         .experimentEndTimestampMillis(endTime.toEpochMilli())
                         .durationMillis(elapsed)
+                        .sessionId(runningQuery.identifier().session())
+                        .iteration(runningQuery.identifier().iteration())
+                        .attempt(attempt)
                         .build());
         currentRunningQuery = Optional.empty();
     }
 
-    public void abortBenchmark(QuerySessionIdentifier identifier) {
-        currentRunningQuery.ifPresent(query -> {
-            Preconditions.checkState(
-                    query.identifier().equals(identifier),
+    public void abortBenchmark(QuerySessionIdentifier identifier, int attempt) {
+        currentRunningQuery.ifPresent(runningQuery -> {
+            Preconditions.checkArgument(
+                    runningQuery.identifier().equals(identifier) && runningQuery.attempt() == attempt,
                     "Query identifiers must match",
-                    SafeArg.of("currentlyRunningIdentifier", query.identifier()),
-                    SafeArg.of("identifier", identifier));
-            query.timer().stop();
+                    SafeArg.of("runningQuery", runningQuery),
+                    SafeArg.of("identifier", identifier),
+                    SafeArg.of("attempt", attempt));
+            runningQuery.timer().stop();
         });
         currentRunningQuery = Optional.empty();
     }
@@ -158,7 +164,12 @@ public final class BenchmarkMetrics {
     }
 
     public void flushMetrics() {
-        getMetricsDataset().write().mode(SaveMode.Append).format("json").save(paths.metricsDir());
+        getMetricsDataset()
+                .write()
+                .partitionBy("sessionId", "iteration", "attempt")
+                .mode(SaveMode.Append)
+                .format("json")
+                .save(paths.metricsDir());
         metricsBuffer.clear();
         MAP_DB.commit();
     }
@@ -173,6 +184,8 @@ public final class BenchmarkMetrics {
     @ImmutablesStyle
     interface RunningQuery {
         QuerySessionIdentifier identifier();
+
+        int attempt();
 
         @Value.Auxiliary
         Stopwatch timer();

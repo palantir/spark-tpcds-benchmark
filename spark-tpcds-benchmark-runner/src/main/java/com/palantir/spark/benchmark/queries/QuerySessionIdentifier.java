@@ -27,6 +27,9 @@ import org.immutables.value.Value;
 @JsonSerialize(as = ImmutableQuerySessionIdentifier.class)
 @JsonDeserialize(as = ImmutableQuerySessionIdentifier.class)
 public interface QuerySessionIdentifier {
+    String NO_SESSION = "NO_SESSION";
+    String SESSION_ID = UUID.randomUUID().toString();
+
     @Value.Parameter
     String queryName();
 
@@ -34,7 +37,12 @@ public interface QuerySessionIdentifier {
     int scale();
 
     @Value.Parameter
-    String session();
+    int iteration();
+
+    @Value.Default
+    default String session() {
+        return SESSION_ID;
+    }
 
     final class Builder extends ImmutableQuerySessionIdentifier.Builder {}
 
@@ -42,11 +50,7 @@ public interface QuerySessionIdentifier {
         return new Builder();
     }
 
-    static QuerySessionIdentifier create(String queryName, int scale) {
-        return builder()
-                .queryName(queryName)
-                .scale(scale)
-                .session(UUID.randomUUID().toString())
-                .build();
+    static QuerySessionIdentifier createDefault(String queryName, int scale, int iteration) {
+        return builder().queryName(queryName).scale(scale).iteration(iteration).build();
     }
 }

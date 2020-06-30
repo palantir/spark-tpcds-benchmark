@@ -22,12 +22,14 @@ import com.github.rholder.retry.StopStrategies;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 import com.google.common.io.CharStreams;
 import com.palantir.logsafe.SafeArg;
 import com.palantir.spark.benchmark.config.BenchmarkRunnerConfig;
 import com.palantir.spark.benchmark.correctness.TpcdsQueryCorrectnessChecks;
 import com.palantir.spark.benchmark.datagen.SortDataGenerator;
 import com.palantir.spark.benchmark.datagen.TpcdsDataGenerator;
+import com.palantir.spark.benchmark.metrics.BenchmarkMetric;
 import com.palantir.spark.benchmark.metrics.BenchmarkMetrics;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.queries.Query;
@@ -43,6 +45,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -106,15 +109,16 @@ public final class Benchmark {
                     "Beginning benchmark iteration {} of {}.",
                     SafeArg.of("currentIteration", iteration),
                     SafeArg.of("totalNumIterations", config.benchmarks().iterations()));
-            config.dataScalesGb().forEach(scale -> {
-                log.info("Beginning benchmarks at a new data scale of {}.", SafeArg.of("dataScale", scale));
-                registration.registerTpcdsTables(scale);
-                registration.registerGensortTable(scale);
-                getQueries()
-                        .forEach(query -> runQueryWithRetries(
-                                query, scale, config.benchmarks().attemptsPerQuery()));
-                log.info("Successfully ran benchmarks at scale of {} GB.", SafeArg.of("scale", scale));
-            });
+            Streams.forEachPair(
+                    config.dataScalesGb().stream(), Stream.generate(Suppliers.ofInstance(iteration)), (scale, iter) -> {
+                        log.info("Beginning benchmarks at a new data scale of {}.", SafeArg.of("dataScale", scale));
+                        registration.registerTpcdsTables(scale);
+                        registration.registerGensortTable(scale);
+                        getQueries()
+                                .forEach(query -> runQueryWithRetries(
+                                        query, scale, iter, config.benchmarks().attemptsPerQuery()));
+                        log.info("Successfully ran benchmarks at scale of {} GB.", SafeArg.of("scale", scale));
+                    });
             log.info(
                     "Successfully finished an iteration of benchmarks at all scales. Completed {} iterations in total.",
                     SafeArg.of("completedIterations", iteration));
@@ -122,7 +126,10 @@ public final class Benchmark {
         log.info("Successfully ran all benchmarks for the requested number of iterations");
 
         metrics.flushMetrics();
-        Dataset<Row> resultMetrics = spark.read().json(paths.metricsDir()).drop("sparkConf");
+        Dataset<Row> resultMetrics = spark.read()
+                .schema(BenchmarkMetric.schema())
+                .json(paths.metricsDir())
+                .drop("sparkConf");
         log.info(
                 "Printing summary metrics (limit 1000):\n{}",
                 SafeArg.of(
@@ -134,7 +141,7 @@ public final class Benchmark {
         log.info("Finished benchmark; exiting");
     }
 
-    private void runQueryWithRetries(Query query, Integer scale, int numAttempts) {
+    private void runQueryWithRetries(Query query, int scale, int iteration, int numAttempts) {
         try {
             RetryerBuilder.<Boolean>newBuilder()
                     .retryIfException()
@@ -142,19 +149,20 @@ public final class Benchmark {
                     .retryIfResult(succeeded -> succeeded == null || !succeeded)
                     .withStopStrategy(StopStrategies.stopAfterAttempt(numAttempts))
                     .build()
-                    .call(() -> attemptQuery(query, scale));
+                    .call(() -> attemptQuery(query, scale, iteration));
         } catch (RetryException | ExecutionException e) {
             log.error(
-                    "Failed to execute query {} at scale {} on all {} attempts",
+                    "Failed to execute query {} at scale {} on all {} attempts in iteration {}",
                     SafeArg.of("query", query.getName()),
                     SafeArg.of("scale", scale),
                     SafeArg.of("numAttempts", numAttempts),
+                    SafeArg.of("iteration", iteration),
                     e);
         }
     }
 
-    private boolean attemptQuery(Query query, Integer scale) {
-        QuerySessionIdentifier identifier = QuerySessionIdentifier.create(query.getName(), scale);
+    private boolean attemptQuery(Query query, int scale, int iteration) {
+        QuerySessionIdentifier identifier = QuerySessionIdentifier.createDefault(query.getName(), scale, iteration);
         int attempt =
                 attemptCounters.compute(identifier, (_key, oldAttempts) -> oldAttempts == null ? 0 : oldAttempts + 1);
         log.info(
@@ -171,21 +179,23 @@ public final class Benchmark {
             }
 
             spark.sparkContext().setJobDescription(String.format("%s-benchmark-attempt-%d", query.getName(), attempt));
-            metrics.startBenchmark(identifier);
+            metrics.startBenchmark(identifier, attempt);
             query.save(resultLocation);
-            metrics.stopBenchmark(identifier);
+            metrics.stopBenchmark(identifier, attempt);
             log.info(
-                    "Successfully ran query {} at scale {}.",
+                    "Successfully ran query {} at scale {} on attempt {}.",
                     SafeArg.of("queryName", query.getName()),
-                    SafeArg.of("scale", scale));
+                    SafeArg.of("scale", scale),
+                    SafeArg.of("attempt", attempt));
             verifyCorrectness(query, identifier, resultLocation);
             return true;
         } catch (Exception e) {
-            metrics.abortBenchmark(identifier);
+            metrics.abortBenchmark(identifier, attempt);
             log.error(
-                    "Caught an exception while running query {} at scale {}; may re-attempt.",
+                    "Caught an exception while running query {} at scale {} on attempt {}; may re-attempt.",
                     SafeArg.of("queryName", query.getName()),
                     SafeArg.of("scale", scale),
+                    SafeArg.of("attempt", attempt),
                     e);
             return false;
         }
