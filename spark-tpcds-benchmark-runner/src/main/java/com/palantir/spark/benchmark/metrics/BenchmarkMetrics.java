@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -59,6 +60,7 @@ public final class BenchmarkMetrics {
     private final BenchmarkPaths paths;
     private final SparkSession spark;
     private final Map<QuerySessionIdentifier, BenchmarkMetric> metricsBuffer;
+    private final List<BenchmarkMetric> historicalMetrics;
     private Optional<RunningQuery> currentRunningQuery = Optional.empty();
 
     public BenchmarkMetrics(
@@ -71,6 +73,9 @@ public final class BenchmarkMetrics {
                         resolvedExperimentName,
                         JacksonSerializer.create(QuerySessionIdentifier.class),
                         JacksonSerializer.create(BenchmarkMetric.class))
+                .createOrOpen();
+        this.historicalMetrics = MAP_DB.indexTreeList(
+                        resolvedExperimentName + "_history", JacksonSerializer.create(BenchmarkMetric.class))
                 .createOrOpen();
         if (!this.metricsBuffer.isEmpty()) {
             log.warn(
@@ -172,6 +177,7 @@ public final class BenchmarkMetrics {
                 .mode(SaveMode.Append)
                 .format("json")
                 .save(paths.metricsDir());
+        historicalMetrics.addAll(metricsBuffer.values());
         metricsBuffer.clear();
         MAP_DB.commit();
     }
