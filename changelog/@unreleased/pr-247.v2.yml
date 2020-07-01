@@ -1,0 +1,5 @@
+type: fix
+fix:
+  description: pass in separate file system for metrics
+  links:
+    - https://github.com/palantir/spark-tpcds-benchmark/pull/247
