@@ -55,7 +55,7 @@ public final class BenchmarkRunner {
         BenchmarkRunnerConfig config = BenchmarkRunnerConfig.parse(configFile);
         Configuration hadoopConf = config.hadoop().toHadoopConf();
         try (FileSystem dataFileSystem =
-                FileSystems.createFileSystem(config.hadoop().dataFilesystemBaseUri(), hadoopConf)) {
+                FileSystems.createFileSystem(config.hadoop().defaultFsBaseUri(), hadoopConf)) {
             SparkConf sparkConf = new SparkConf().setMaster(config.spark().master());
             config.spark().sparkConf().forEach(sparkConf::set);
             hadoopConf.forEach(confEntry ->
@@ -106,7 +106,8 @@ public final class BenchmarkRunner {
                     config.dataGeneration().overwriteData(),
                     dataGeneratorThreadPool);
             TpcdsQueryCorrectnessChecks correctness = new TpcdsQueryCorrectnessChecks(paths, dataFileSystem, spark);
-            BenchmarkMetrics metrics = new BenchmarkMetrics(config.spark(), experimentName, paths, spark);
+            BenchmarkMetrics metrics = new BenchmarkMetrics(
+                    config.spark(), config.hadoop().defaultMetricsBaseUriString(), experimentName, paths, spark);
             new Benchmark(
                             config,
                             dataGenerator,
