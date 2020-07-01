@@ -43,14 +43,20 @@ public interface HadoopConfiguration {
 
     String defaultFilesystem();
 
-    Optional<String> dataFilesystem();
-
     Map<String, FilesystemConfiguration> filesystems();
 
-    @Value.Lazy
-    default URI dataFilesystemBaseUri() {
-        String baseUri = getFilesystemBaseUriOrThrow(dataFilesystem().orElseGet(this::defaultFilesystem));
-        return new org.apache.hadoop.fs.Path(baseUri).toUri();
+    @Value.Derived
+    default String defaultFsBaseUriString() {
+        return Optional.ofNullable(filesystems().get(defaultFilesystem()))
+                .orElseThrow(() -> new SafeIllegalArgumentException(
+                        "Specified defaultFilesystem is not configured",
+                        SafeArg.of("defaultFilesystem", defaultFilesystem())))
+                .baseUri();
+    }
+
+    @Value.Derived
+    default URI defaultFsBaseUri() {
+        return new org.apache.hadoop.fs.Path(defaultFsBaseUriString()).toUri();
     }
 
     @Value.Derived
@@ -74,15 +80,8 @@ public interface HadoopConfiguration {
                         filesystems().values().stream().flatMap(fsConf -> fsConf.toHadoopConf().entrySet().stream()))
                 .collectToMap()
                 .forEach(hadoopConf::set);
-        hadoopConf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, getFilesystemBaseUriOrThrow(defaultFilesystem()));
+        hadoopConf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, defaultFsBaseUriString());
         return hadoopConf;
-    }
-
-    default String getFilesystemBaseUriOrThrow(String filesystemName) {
-        return Optional.ofNullable(filesystems().get(filesystemName))
-                .orElseThrow(() -> new SafeIllegalArgumentException(
-                        "Specified filesystem is not configured", SafeArg.of("filesystem", filesystemName)))
-                .baseUri();
     }
 
     static Configuration loadConfFromFile(Configuration conf, File confFile) throws MalformedURLException {

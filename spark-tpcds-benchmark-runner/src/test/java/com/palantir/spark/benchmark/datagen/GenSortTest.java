@@ -43,7 +43,7 @@ public final class GenSortTest extends AbstractLocalSparkTest {
         Path destinationDataDirectory = createTemporaryWorkingDir("data");
         HadoopConfiguration hadoopConfiguration = getHadoopConfiguration(destinationDataDirectory);
         FileSystem dataFileSystem = FileSystems.createFileSystem(
-                hadoopConfiguration.dataFilesystemBaseUri(), hadoopConfiguration.toHadoopConf());
+                hadoopConfiguration.defaultFsBaseUri(), hadoopConfiguration.toHadoopConf());
 
         BenchmarkPaths paths = new BenchmarkPaths("foo");
         int scale = 1;
@@ -69,14 +69,13 @@ public final class GenSortTest extends AbstractLocalSparkTest {
 
         List<String> generatedLines = read(
                 Paths.get(
-                        hadoopConfiguration.dataFilesystemBaseUri().getPath(),
-                        paths.tableCsvFile(scale, "gensort_data", 0)),
+                        hadoopConfiguration.defaultFsBaseUri().getPath(), paths.tableCsvFile(scale, "gensort_data", 0)),
                 "csv");
         assertThat(generatedLines).hasSize(numRecords);
 
         List<String> copiedParquet = read(
                 Paths.get(
-                        hadoopConfiguration.dataFilesystemBaseUri().getPath(),
+                        hadoopConfiguration.defaultFsBaseUri().getPath(),
                         paths.tableParquetLocation(scale, "gensort_data")),
                 "parquet");
         assertThat(copiedParquet).hasSameElementsAs(generatedLines);

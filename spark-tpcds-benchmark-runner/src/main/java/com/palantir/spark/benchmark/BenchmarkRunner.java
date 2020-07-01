@@ -55,7 +55,7 @@ public final class BenchmarkRunner {
         BenchmarkRunnerConfig config = BenchmarkRunnerConfig.parse(configFile);
         Configuration hadoopConf = config.hadoop().toHadoopConf();
         try (FileSystem dataFileSystem =
-                FileSystems.createFileSystem(config.hadoop().dataFilesystemBaseUri(), hadoopConf)) {
+                FileSystems.createFileSystem(config.hadoop().defaultFsBaseUri(), hadoopConf)) {
             SparkConf sparkConf = new SparkConf().setMaster(config.spark().master());
             config.spark().sparkConf().forEach(sparkConf::set);
             hadoopConf.forEach(confEntry ->

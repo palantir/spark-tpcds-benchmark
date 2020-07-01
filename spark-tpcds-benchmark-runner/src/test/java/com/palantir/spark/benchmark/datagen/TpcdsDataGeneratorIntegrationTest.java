@@ -40,7 +40,7 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
         Path destinationDataDirectory = createTemporaryWorkingDir("data");
         HadoopConfiguration hadoopConfiguration = getHadoopConfiguration(destinationDataDirectory);
         FileSystem dataFileSystem = FileSystems.createFileSystem(
-                hadoopConfiguration.dataFilesystemBaseUri(), hadoopConfiguration.toHadoopConf());
+                hadoopConfiguration.defaultFsBaseUri(), hadoopConfiguration.toHadoopConf());
 
         BenchmarkPaths paths = new BenchmarkPaths("foo");
         int scale = 1;
@@ -56,7 +56,7 @@ public final class TpcdsDataGeneratorIntegrationTest extends AbstractLocalSparkT
                 MoreExecutors.newDirectExecutorService());
         generator.generateData();
         try (Stream<Path> generatedCsvFiles = Files.list(
-                        Paths.get(hadoopConfiguration.dataFilesystemBaseUri().getPath(), paths.csvDir(scale)))
+                        Paths.get(hadoopConfiguration.defaultFsBaseUri().getPath(), paths.csvDir(scale)))
                 .filter(path -> path.toString().endsWith(".csv"))) {
             assertThat(generatedCsvFiles.count()).isEqualTo(25);
         }
