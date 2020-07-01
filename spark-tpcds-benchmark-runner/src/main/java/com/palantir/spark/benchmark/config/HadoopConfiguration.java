@@ -43,6 +43,8 @@ public interface HadoopConfiguration {
 
     String defaultFilesystem();
 
+    Optional<String> metricsFileSystem();
+
     Map<String, FilesystemConfiguration> filesystems();
 
     @Value.Derived
@@ -51,6 +53,16 @@ public interface HadoopConfiguration {
                 .orElseThrow(() -> new SafeIllegalArgumentException(
                         "Specified defaultFilesystem is not configured",
                         SafeArg.of("defaultFilesystem", defaultFilesystem())))
+                .baseUri();
+    }
+
+    @Value.Derived
+    default String defaultMetricsBaseUriString() {
+        String resolvedMetricsFilesystem = metricsFileSystem().orElseGet(this::defaultFilesystem);
+        return Optional.ofNullable(filesystems().get(resolvedMetricsFilesystem))
+                .orElseThrow(() -> new SafeIllegalArgumentException(
+                        "Specified filesystem for metrics is not configured",
+                        SafeArg.of("resolvedMetricsFilesystem", resolvedMetricsFilesystem)))
                 .baseUri();
     }
 

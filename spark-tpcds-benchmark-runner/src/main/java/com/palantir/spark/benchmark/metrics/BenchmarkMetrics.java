@@ -55,6 +55,7 @@ public final class BenchmarkMetrics {
     private static final DB MAP_DB = initializeMapDb();
 
     private final SparkConfiguration config;
+    private final String metricsFilesystemBaseUri;
     private final String resolvedExperimentName;
     private final BenchmarkPaths paths;
     private final SparkSession spark;
@@ -62,8 +63,13 @@ public final class BenchmarkMetrics {
     private Optional<RunningQuery> currentRunningQuery = Optional.empty();
 
     public BenchmarkMetrics(
-            SparkConfiguration config, String resolvedExperimentName, BenchmarkPaths paths, SparkSession spark) {
+            SparkConfiguration config,
+            String metricsFilesystemBaseUri,
+            String resolvedExperimentName,
+            BenchmarkPaths paths,
+            SparkSession spark) {
         this.config = config;
+        this.metricsFilesystemBaseUri = metricsFilesystemBaseUri;
         this.resolvedExperimentName = resolvedExperimentName;
         this.paths = paths;
         this.spark = spark;
@@ -169,7 +175,7 @@ public final class BenchmarkMetrics {
                 .partitionBy("sessionId", "iteration", "attempt")
                 .mode(SaveMode.Append)
                 .format("json")
-                .save(paths.metricsDir());
+                .save(Paths.get(metricsFilesystemBaseUri, paths.metricsDir()).toString());
         metricsBuffer.clear();
         MAP_DB.commit();
     }

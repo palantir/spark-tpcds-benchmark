@@ -25,6 +25,7 @@ import com.palantir.spark.benchmark.metrics.BenchmarkMetric;
 import com.palantir.spark.benchmark.metrics.BenchmarkMetrics;
 import com.palantir.spark.benchmark.paths.BenchmarkPaths;
 import com.palantir.spark.benchmark.queries.QuerySessionIdentifier;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
@@ -34,11 +35,13 @@ import org.junit.jupiter.api.Test;
 
 public final class BenchmarkMetricsTest extends AbstractLocalSparkTest {
     @Test
-    public void testMetrics() {
+    public void testMetrics() throws Exception {
         String experimentName = "test-experiment-" + UUID.randomUUID().toString();
         BenchmarkPaths paths = new BenchmarkPaths(experimentName);
-        BenchmarkMetrics metrics =
-                new BenchmarkMetrics(SparkConfiguration.builder().build(), experimentName, paths, sparkSession);
+        Path metricsDir = createTemporaryWorkingDir("metrics_dir");
+        String metricsBaseUri = "file://" + metricsDir.toAbsolutePath();
+        BenchmarkMetrics metrics = new BenchmarkMetrics(
+                SparkConfiguration.builder().build(), metricsBaseUri, experimentName, paths, sparkSession);
         QuerySessionIdentifier identifier1 = TestIdentifiers.create("q1", 10);
         metrics.startBenchmark(identifier1, 0);
         metrics.stopBenchmark(identifier1, 0);
@@ -65,12 +68,12 @@ public final class BenchmarkMetricsTest extends AbstractLocalSparkTest {
         assertThat(sparkSession
                         .read()
                         .schema(BenchmarkMetric.schema())
-                        .json(paths.metricsDir())
+                        .json(Paths.get(metricsBaseUri, paths.metricsDir()).toString())
                         .drop("sparkConf")
                         .collectAsList())
                 .containsExactlyInAnyOrderElementsOf(metricsRows);
 
         // clean up
-        Files.delete(Paths.get(paths.metricsDir()).toFile());
+        Files.delete(Paths.get(metricsBaseUri, paths.metricsDir()).toFile());
     }
 }
