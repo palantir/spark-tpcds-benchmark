@@ -49,20 +49,18 @@ public interface HadoopConfiguration {
 
     @Value.Derived
     default String defaultFsBaseUriString() {
-        return Optional.ofNullable(filesystems().get(defaultFilesystem()))
-                .orElseThrow(() -> new SafeIllegalArgumentException(
-                        "Specified defaultFilesystem is not configured",
-                        SafeArg.of("defaultFilesystem", defaultFilesystem())))
-                .baseUri();
+        return getFilesystemBaseUriOrThrow(defaultFilesystem());
     }
 
     @Value.Derived
     default String defaultMetricsBaseUriString() {
-        String resolvedMetricsFilesystem = metricsFileSystem().orElseGet(this::defaultFilesystem);
-        return Optional.ofNullable(filesystems().get(resolvedMetricsFilesystem))
+        return getFilesystemBaseUriOrThrow(metricsFileSystem().orElseGet(this::defaultFilesystem));
+    }
+
+    default String getFilesystemBaseUriOrThrow(String filesystemName) {
+        return Optional.ofNullable(filesystems().get(filesystemName))
                 .orElseThrow(() -> new SafeIllegalArgumentException(
-                        "Specified filesystem for metrics is not configured",
-                        SafeArg.of("resolvedMetricsFilesystem", resolvedMetricsFilesystem)))
+                        "Specified filesystem is not configured", SafeArg.of("filesystem", filesystemName)))
                 .baseUri();
     }
 
