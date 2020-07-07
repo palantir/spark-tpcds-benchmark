@@ -1,4 +1,4 @@
-com.amazonaws:aws-java-sdk-* = 1.11.816
+com.amazonaws:aws-java-sdk-* = 1.11.817
 com.fasterxml.jackson.*:* = 2.11.1
 com.github.rholder:guava-retrying = 2.0.0
 com.google.guava:guava = 27.0.1-jre
