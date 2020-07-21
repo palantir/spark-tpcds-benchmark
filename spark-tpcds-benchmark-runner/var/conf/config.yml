@@ -37,8 +37,8 @@ hadoop:
   # Supported types are "azure", "s3a" and "simple". Use "simple" for HDFS and local file systems.
   filesystems:
     azure:
-      accessKey: foo
-      accountName: bar
+      accessKey: __PLACEHOLDER__
+      accountName: __PLACEHOLDER__
       containerName: spark-benchmark
       type: azure
     local:
@@ -46,8 +46,8 @@ hadoop:
       type: simple
     s3a:
       baseUri: 's3a://spark-benchmark/'
-      accessKey: foo # Optional
-      secretKey: foo # Optional
+      accessKey: __PLACEHOLDER__ # Optional
+      secretKey: __PLACEHOLDER__ # Optional
       type: s3a
   
   # The filesystem to be used to generate data, read the inputs from and write the query results to.
@@ -66,7 +66,7 @@ hadoop:
     
   hadoopConfDirs:
     # Directory containing core-site.xml, hdfs-site.xml and yarn-site.xml if necessary.
-    - /opt/palantir/services/.49630/var/conf/hadoop
+    - /path/to/hadoop/conf
 spark:
   # Run local spark by default.
   master: local[4]
@@ -79,9 +79,9 @@ spark:
   sparkConf:
     # # If running a distributed benchmark:
     # spark.yarn.executor.memoryOverhead: 2G
-    # spark.executorEnv.JAVA_HOME: /opt/palantir/skylab/jdks/jdk11/110.5.70/jdk11-110.5.70/asset/zulu11.39.15-ca-jdk11.0.7-linux_x64/
+    # spark.executorEnv.JAVA_HOME: /path/to/java/home
     # spark.yarn.jars: service/lib/*
-    # spark.yarn.stagingDir: 'hdfs://pal-hdfs/user/palantir'
+    # spark.yarn.stagingDir: 'hdfs://my-hdfs/user/palantir'
     
     spark.hadoop.hadoop.tmp.dir: /scratch/hadoop-tmp
     
