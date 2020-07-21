@@ -1,50 +1,101 @@
-hadoop:
-  hadoopConfDirs: []
-  hadoopConf: {}
-  defaultFilesystem: local
-  filesystems:
-    local:
-      type: simple
-      baseUri: file:///tmp/spark-benchmark
-    hdfs:
-      type: simple
-      baseUri: hdfs://spark-benchmark
-    s3a:
-      type: s3a
-      baseUri: s3a://MY_S3_BUCKET/spark-benchmark
-      accessKey: MY_ACCESS_KEY
-      secretKey: MY_SECRET_KEY
-    azure:
-      type: azure
-      accountName: MY_ACCOUNT_NAME
-      accessKey: MY_ACCESS_KEY
-      containerName: spark-benchmark
-spark:
-  #executorCores: 1
-  #executorInstances: 8
-  #executorMemory: 1g
-  #master: yarn
-  master: local[4]
-  sparkConf:
-    spark.yarn.jars: service/lib/*
-    spark.sql.adaptive.enabled: true
-    spark.yarn.max.executor.failures: 1000
-
-dataScalesGb:
-  - 1
 dataGeneration:
-  parallelism: 5
+  gensort:
+    # Whether to generate data for the sort benchmark.
+    enabled: true
+  tpcds:
+    # Whether to generate data for the TPC-DS benchmark.
+    enabled: true
   tempWorkingDir: /tmp/spark-benchmark/datagen-working-dir
-  tpcds:
-    enabled: true
-  gensort:
-    enabled: true
+  
+  # Whether to overwrite any previously generated data. If set to false, the program will fail with an exception.
   overwriteData: false
+  
+  # The number of threads used for data generation.
+  parallelism: 5
+
 benchmarks:
-  # Optional: Defaults to current timestamp.
-  # experimentName: <change me>
-  iterations: 1
-  tpcds:
-    enabled: true
+  # Optional. Defaults to current timestamp.
+  experimentName: experiment-1
+  
   gensort:
-    enabled: true
+    # Whether to run the sort benchmark.
+    enabled: false
+  tpcds:
+    # Whether to run the TPC-DS benchmark suite.
+    enabled: false
+
+  # The number of iterations to run each benchmark.
+  iterations: 10
+
+# A list of sizes in Gigabytes to generate the data and run the benchmarks.
+dataScalesGb:
+  - 10
+  - 1024
+
+hadoop:
+  # A map of a filesystem name to its settings. The names are used to reference the filesystem in the settings below.
+  # Supported types are "azure", "s3a" and "simple". Use "simple" for HDFS and local file systems.
+  filesystems:
+    azure:
+      accessKey: __PLACEHOLDER__
+      accountName: __PLACEHOLDER__
+      containerName: spark-benchmark
+      type: azure
+    local:
+      baseUri: 'file:///home/palantir/spark-benchmark'
+      type: simple
+    s3a:
+      baseUri: 's3a://spark-benchmark/'
+      accessKey: __PLACEHOLDER__ # Optional
+      secretKey: __PLACEHOLDER__ # Optional
+      type: s3a
+  
+  # The filesystem to be used to generate data, read the inputs from and write the query results to.
+  defaultFilesystem: s3a
+  
+  # The filesystem to be used to write the query duration related metrics to. We recommend using a "simple" filesystem for this.
+  # This is optional and will default to "defaultFilesystem" if empty.
+  metricsFileSystem: local
+
+  hadoopConf:
+    hadoop.tmp.dir: /scratch/hadoop-tmp
+
+    # S3 specific settings to commit data consistently.
+    fs.s3a.committer.name: directory
+    fs.s3a.committer.staging.conflict-mode: append
+    
+  hadoopConfDirs:
+    # Directory containing core-site.xml, hdfs-site.xml and yarn-site.xml if necessary.
+    - /path/to/hadoop/conf
+spark:
+  # Run local spark by default.
+  master: local[4]
+
+  # If running a distributed benchmark:
+  # executorCores: 2
+  # executorInstances: 48
+  # executorMemory: 8G
+  
+  sparkConf:
+    # # If running a distributed benchmark:
+    # spark.yarn.executor.memoryOverhead: 2G
+    # spark.executorEnv.JAVA_HOME: /path/to/java/home
+    # spark.yarn.jars: service/lib/*
+    # spark.yarn.stagingDir: 'hdfs://my-hdfs/user/palantir'
+    
+    spark.hadoop.hadoop.tmp.dir: /scratch/hadoop-tmp
+    
+    # Use a more reliable committer settings.
+    spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version: 2
+    spark.sql.parquet.output.committer.class: org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
+    spark.sql.sources.commitProtocolClass: org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
+    
+    # S3 specific settings to commit data consistently.
+    spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a: org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory
+    
+    # Use adaptive query execution for partitioning generated data better, as well as performing joins more efficiently.
+    spark.sql.adaptive.enabled: true
+    
+    # Set a very high number, so that the benchmark can continue even if certain queries fail.
+    spark.yarn.max.executor.failures: 1000
+    
