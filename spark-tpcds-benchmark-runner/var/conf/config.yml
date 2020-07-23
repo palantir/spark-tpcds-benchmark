@@ -77,7 +77,8 @@ spark:
   # executorMemory: 8G
   
   sparkConf:
-    # # If running a distributed benchmark:
+    # # If running a distributed benchmark on YARN:
+    # master: yarn
     # spark.yarn.executor.memoryOverhead: 2G
     # spark.executorEnv.JAVA_HOME: /path/to/java/home
     # spark.yarn.jars: service/lib/*
