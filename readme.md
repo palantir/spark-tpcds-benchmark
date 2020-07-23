@@ -1,4 +1,5 @@
 
+
 <p align="right">
 <a href="https://autorelease.general.dmz.palantir.tech/palantir/spark-tpcds-benchmark"><img src="https://img.shields.io/badge/Perform%20an-Autorelease-success.svg" alt="Autorelease"></a>
 </p>
@@ -16,15 +17,20 @@ The benchmark suite can be run on MacOS or CentOS 6+. It does not currently supp
 
 # Usage
 
-The benchmark suite requires a storage layer, distributed (such as HDFS/S3/Azure Blob Storage) or local to store the generated test data, as well as the computation
-results. This tool also requires a cluster manager, such as YARN for running the Spark driver and executors when running in non-local mode.
+The benchmark suite requires a storage layer, distributed (such as HDFS/S3/Azure Blob Storage) or local to store the generated test data, as well as the computation results. This tool supports running the benchmarks either in local spark mode on a single JVM, or with a cluster manager, such as YARN when running distributed benchmarks on several machines.
 
-1. Run `./gradlew distTar` to build the initial distribution.
-2. Get the distribution from `spark-tpcds-benchmark-runner/build/distributions/spark-tpcds-benchmark-runner-<VERSION>.tgz`
-3. Upload and unpack the distribution to a node in the cluster.
-4. In the distribution, edit `var/conf/config.yml` to match the benchmarking environment you will run with. **Documentation for the various configurable options are described in the [config.yml](https://github.com/palantir/spark-tpcds-benchmark/blob/develop/spark-tpcds-benchmark-runner/var/conf/config.yml) file.**
-5. Set the JAVA_HOME environment variable to point to Java 11.
-6. Run `service/bin/init.sh start`. The benchmarks will begin running in the background. The driver exits upon
+ - Run `./gradlew distTar` to build the initial distribution.
+ - Get the distribution from `spark-tpcds-benchmark-runner/build/distributions/spark-tpcds-benchmark-runner-<VERSION>.tgz`
+ - Upload and unpack the distribution to a node in the cluster.
+ - In the distribution, edit `var/conf/config.yml` to match the benchmarking environment you will run with. **Documentation for the various configurable options are described in the [config.yml](https://github.com/palantir/spark-tpcds-benchmark/blob/develop/spark-tpcds-benchmark-runner/var/conf/config.yml) file.**
+	- Storage Layer:
+		- This tool supports any Hadoop compatible storage layer (eg S3/ABS/HDFS). Once that is setup, the credentials and account details can be updated in the `hadoop` configuration section. Placeholder configuration blocks are provided for S3, ABS and HDFS.
+	- Compute Layer:
+		 - When running with local spark, the `spark` configuration section in config.yml should work out of the box.
+		 - When running on a cluster manager, the cluster first needs to be installed and configured. If you use YARN, [this](https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YARN.html#:~:text=core%2Ddefault.xml-,Apache%20Hadoop%20YARN,or%20a%20DAG%20of%20jobs.) and [this](http://spark.apache.org/docs/latest/running-on-yarn.html) are good places to start. Once that is done, the `spark` and `hadoop` configuration sections need to be changed to point to the cluster manager.
+	 - We recommend setting `hadoop.tmp.dir` to a fast SSD partition for each machine. It is set to a subfolder in `/scratch` by default.
+ - Set the JAVA_HOME environment variable to point to Java 11.
+ - Run `service/bin/init.sh start`. The benchmarks will begin running in the background. The driver exits upon
    completing the benchmark suite.
 
 The performance results of running the benchmarks can be found in JSON files located under `benchmark_results/` in the specified metrics filesystem.
