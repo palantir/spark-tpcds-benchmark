@@ -78,7 +78,7 @@ spark:
   
   sparkConf:
     # # If running a distributed benchmark on YARN:
-    # master: local[4]
+    # master: yarn
     # spark.yarn.executor.memoryOverhead: 2G
     # spark.executorEnv.JAVA_HOME: /path/to/java/home
     # spark.yarn.jars: service/lib/*
