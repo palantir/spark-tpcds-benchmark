@@ -13,12 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-plugins {
-    id 'com.palantir.docker' version '0.21.0'
-    id 'com.palantir.sls-java-service-distribution'
-    id 'maven-publish'
-}
+apply plugin: 'com.palantir.sls-java-service-distribution'
+apply from: "${rootDir}/gradle/publish-dist.gradle"
 
 dependencies {
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
@@ -49,7 +45,7 @@ dependencies {
 }
 
 distribution {
-    serviceName project.name
+    serviceName rootProject.name
     mainClass 'com.palantir.spark.benchmark.BenchmarkRunner'
     manifestExtensions 'upgrade-strategy': 'shutdown'
     manifestExtensions 'public-proxy-endpoints': []
