@@ -31,7 +31,7 @@ The benchmark suite requires a storage layer, distributed (such as HDFS/S3/Azure
 	 - Ephemeral Disks
 		 - We recommend setting `hadoop.tmp.dir` to a fast SSD drive for each machine. It is set to a subfolder in `/scratch` by default.
 		 - On AWS, we typically use m5d/r5d instance types, which already come with  NVMe SSD ephemeral disks, but are not mounted anywhere. We use this [script](https://github.com/palantir/spark-tpcds-benchmark/blob/develop/scripts/aws_mount_ephemeral_disk.sh) to mount it to `scratch`. These already come with hardware level encryption, so no LUKS encryption is necessary.
-		 - On Azure, we typically use hc44rs or d48ds_v4 instance types. These come with SSD ephemeral disks and aren't mounted either. They also do not have hardware level encryption as of the time of writing (July 2020). We use this [script](https://github.com/palantir/spark-tpcds-benchmark/blob/develop/scripts/azure_mount_and_encrypt_ephemeral_disk.sh) with `CLOUD_PROVIDER=azure` to mount and LUKS encrypt them.
+		 - On Azure, we typically use hc44rs or d48ds_v4 instance types. These come with SSD ephemeral disks and aren't mounted either. They also do not have hardware level encryption as of the time of writing (July 2020). We use this [script](https://github.com/palantir/spark-tpcds-benchmark/blob/develop/scripts/azure_mount_and_encrypt_ephemeral_disk.sh) to mount and LUKS encrypt them.
  - Set the JAVA_HOME environment variable to point to Java 11.
  - Run `service/bin/init.sh start`. The benchmarks will begin running in the background. The driver exits upon
    completing the benchmark suite.
