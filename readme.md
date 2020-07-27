@@ -19,8 +19,7 @@ The benchmark suite can be run on MacOS or CentOS 6+. It does not currently supp
 
 The benchmark suite requires a storage layer, distributed (such as HDFS/S3/Azure Blob Storage) or local to store the generated test data, as well as the computation results. This tool supports running the benchmarks either in local spark mode on a single JVM, or with a cluster manager, such as YARN when running distributed benchmarks on several machines.
 
- - Run `./gradlew distTar` to build the initial distribution.
- - Get the distribution from `spark-tpcds-benchmark-runner/build/distributions/spark-tpcds-benchmark-<VERSION>.tgz`
+ - Download the latest version of the distribution from https://bintray.com/palantir/releases/spark-tpcds-benchmark.
  - Upload and unpack the distribution to a node in the cluster.
  - In the distribution, edit `var/conf/config.yml` to match the benchmarking environment you will run with. **Documentation for the various configurable options are described in the [config.yml](https://github.com/palantir/spark-tpcds-benchmark/blob/develop/spark-tpcds-benchmark-runner/var/conf/config.yml) file.**
 	- Storage Layer:
