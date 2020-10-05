@@ -1,7 +1,7 @@
-com.amazonaws:aws-java-sdk-* = 1.11.870
-com.fasterxml.jackson.*:* = 2.11.2
+com.amazonaws:aws-java-sdk-* = 1.11.876
+com.fasterxml.jackson.*:* = 2.11.3
 com.github.rholder:guava-retrying = 2.0.0
-com.google.guava:guava = 27.0.1-jre
+com.google.guava:guava = 29.0-jre
 com.microsoft.azure:azure-storage = 8.4.0
 com.palantir.common:streams = 1.9.1
 com.palantir.conjure.java.runtime:* = 6.6.0
