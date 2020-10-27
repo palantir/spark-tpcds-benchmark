@@ -16,4 +16,4 @@ org.apache.spark:* = 3.0.0
 org.immutables:* = 2.8.8
 org.junit.jupiter:* = 5.7.0
 org.mapdb:* = 3.0.8
-org.mockito:* = 3.5.15
+org.mockito:* = 3.6.0
