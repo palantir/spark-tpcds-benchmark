@@ -1,4 +1,4 @@
-com.amazonaws:aws-java-sdk-* = 1.11.903
+com.amazonaws:aws-java-sdk-* = 1.11.908
 com.fasterxml.jackson.*:* = 2.11.3
 com.github.rholder:guava-retrying = 2.0.0
 com.google.guava:guava = 30.0-jre
@@ -16,4 +16,4 @@ org.apache.spark:* = 3.0.0
 org.immutables:* = 2.8.8
 org.junit.jupiter:* = 5.7.0
 org.mapdb:* = 3.0.8
-org.mockito:* = 3.6.0
+org.mockito:* = 3.6.28
