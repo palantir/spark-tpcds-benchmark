@@ -16,11 +16,9 @@
 
 buildscript {
     repositories {
-        jcenter()
+        gradlePluginPortal()
         mavenCentral()
-        maven {
-            url 'https://palantir.bintray.com/releases'
-        }
+        jcenter()
     }
 
     dependencies {
@@ -53,12 +51,8 @@ allprojects {
     group 'com.palantir.spark.tpcds'
 
     repositories {
-        maven { url rootProject.file('jars') } // Fetch first from local jars.
-        jcenter()
         mavenCentral()
-        maven {
-            url 'https://palantir.bintray.com/releases'
-        }
+        jcenter()
     }
 }
 
