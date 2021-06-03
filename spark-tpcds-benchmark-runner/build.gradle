@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 apply plugin: 'com.palantir.sls-java-service-distribution'
-apply from: "${rootDir}/gradle/publish-dist.gradle"
+apply plugin: 'com.palantir.external-publish-application-dist'
 
 dependencies {
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
